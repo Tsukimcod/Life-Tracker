@@ -369,7 +369,88 @@ select.form-control option { background: var(--bg3); }
 .empty-icon { font-size: 32px; margin-bottom: 10px; }
 .empty-msg { font-size: 14px; }
 
-/* ── Responsive ── */
+/* ── Strength specific ── */
+.ex-block {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.ex-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.ex-name { font-size:14px; font-weight:600; color:var(--text); }
+.ex-badge { font-size:11px; padding:2px 8px; border-radius:10px; font-weight:500; }
+.ex-badge-push { background:rgba(255,92,92,0.15); color:var(--red); }
+.ex-badge-core { background:rgba(91,164,255,0.15); color:var(--blue); }
+.ex-badge-legs { background:rgba(0,232,122,0.15); color:var(--green); }
+.ex-badge-iso { background:rgba(255,179,71,0.15); color:var(--amber); }
+.ex-sets { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.set-chip {
+  display:inline-flex; align-items:center; gap:6px;
+  background: var(--bg4); border:1px solid var(--border2);
+  border-radius:6px; padding:5px 10px;
+  font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text2);
+  cursor:pointer; transition: border-color 0.15s, background 0.15s;
+}
+.set-chip.done { background: var(--green-dim); border-color:var(--green); color:var(--green); }
+.set-chip input[type=checkbox] { display:none; }
+.ex-target { font-size:12px; color:var(--text3); margin-top:4px; }
+.ex-tip { font-size:11px; color:var(--text3); margin-top:6px; padding:6px 10px; background:var(--bg); border-radius:4px; border-left:2px solid var(--green); }
+.coach-tip { font-size:12px; color:var(--amber); margin-top:6px; padding:6px 10px; background:rgba(255,179,71,0.07); border-radius:4px; border-left:2px solid var(--amber); }
+
+/* Day plan row */
+.day-plan-row {
+  display:grid; grid-template-columns:90px 1fr auto;
+  align-items:start; gap:16px;
+  padding:12px 18px; border-bottom:1px solid var(--border);
+}
+.day-plan-row:last-child { border-bottom:none; }
+.day-plan-row.today-row { background: var(--green-dim); }
+.day-name { font-size:12px; font-weight:500; color:var(--text2); padding-top:2px; }
+.day-name.today { color:var(--green); font-weight:700; }
+.workout-pills { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.workout-pill {
+  font-size:11px; padding:2px 8px; border-radius:10px;
+  background:var(--bg4); color:var(--text3); font-weight:500;
+}
+
+/* Constance score ring */
+.score-ring-wrap { display:flex; align-items:center; gap:16px; }
+.score-ring { position:relative; width:64px; height:64px; }
+.score-ring svg { transform:rotate(-90deg); }
+.score-ring-num {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:'JetBrains Mono',monospace; font-size:16px; font-weight:700; color:var(--green);
+}
+.score-ring-label { font-size:11px; color:var(--text3); margin-top:2px; }
+
+/* Check row for today */
+.check-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+.check-row:last-child { border-bottom:none; }
+.check-label { font-size:13px; color:var(--text); }
+.check-sub { font-size:11px; color:var(--text3); margin-top:1px; }
+.check-btn {
+  width:28px; height:28px; border-radius:50%;
+  border:2px solid var(--border2); background:none;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition: border-color 0.15s, background 0.15s;
+  font-size:14px; color:transparent;
+}
+.check-btn.checked { border-color:var(--green); background:var(--green); color:#000; }
+
+/* Progress table */
+.prog-table { width:100%; border-collapse:collapse; font-size:13px; }
+.prog-table th { padding:8px 12px; text-align:left; font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.6px; color:var(--text3); border-bottom:1px solid var(--border); }
+.prog-table td { padding:10px 12px; border-bottom:1px solid var(--border); color:var(--text2); }
+.prog-table tr:last-child td { border-bottom:none; }
+.delta-pos { color:var(--green); font-weight:600; }
+.delta-neg { color:var(--red); font-weight:600; }
+.delta-neu { color:var(--text3); }
+
+/* Log exercise inputs */
+.log-ex-row { display:grid; grid-template-columns:1fr 80px 80px; gap:8px; align-items:end; margin-bottom:8px; }
+.log-ex-label { font-size:12px; font-weight:600; color:var(--text); padding:9px 0 0; }
+
 @media (max-width: 768px) {
   .sidebar { width: 56px; }
   .sidebar .nav-item span, .sidebar-logo .logo-sub, .sidebar-logo .logo-mark span,
@@ -399,10 +480,9 @@ select.form-control option { background: var(--bg3); }
       <span class="nav-icon">🏃</span>
       <span>Course</span>
     </button>
-    <button class="nav-item soon" onclick="showPage('strength')">
+    <button class="nav-item" onclick="showPage('strength')">
       <span class="nav-icon">💪</span>
       <span>Musculation</span>
-      <span class="nav-badge">soon</span>
     </button>
     <button class="nav-item soon">
       <span class="nav-icon">❤️</span>
@@ -425,7 +505,7 @@ select.form-control option { background: var(--bg3); }
     </button>
   </div>
 
-  <div class="sidebar-footer">v1.0 · Course</div>
+  <div class="sidebar-footer">v1.1 · Course + Muscu</div>
 </nav>
 
 <!-- ══ MAIN ══ -->
@@ -611,6 +691,98 @@ select.form-control option { background: var(--bg3); }
   </div>
 </div><!-- /page-running -->
 
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     PAGE : MUSCULATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="page-strength" class="page">
+
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <div class="page-title"><span class="pulse-dot"></span>Musculation</div>
+        <div class="page-subtitle" id="str-subtitle">Chargement…</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="strShowTab('history-tab')">Historique</button>
+        <button class="btn btn-primary" onclick="strShowTab('log-tab')">+ Séance</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Sub-tabs -->
+    <div class="sub-tabs">
+      <button class="sub-tab active" id="stab-today" onclick="strShowTab('today-tab')">Aujourd'hui</button>
+      <button class="sub-tab" id="stab-week" onclick="strShowTab('week-tab')">Planning semaine</button>
+      <button class="sub-tab" id="stab-progress" onclick="strShowTab('progress-tab')">Progression</button>
+      <button class="sub-tab" id="stab-log" onclick="strShowTab('log-tab')">Enregistrer</button>
+      <button class="sub-tab" id="stab-history" onclick="strShowTab('history-tab')">Historique</button>
+    </div>
+
+    <!-- ── TODAY ── -->
+    <div id="today-tab" class="str-tab">
+
+      <!-- Score constance + metrics -->
+      <div class="metric-grid" id="str-metrics"></div>
+
+      <!-- Today's workout card -->
+      <div class="card" id="today-workout-card">
+        <div id="today-workout-content"></div>
+      </div>
+
+      <!-- Next week adjustments -->
+      <div class="card" id="next-week-card" style="display:none;">
+        <div class="card-title">📈 Ajustements semaine prochaine</div>
+        <div id="next-week-content"></div>
+      </div>
+
+    </div>
+
+    <!-- ── WEEK PLAN ── -->
+    <div id="week-tab" class="str-tab" style="display:none;">
+      <div id="week-plan-content"></div>
+    </div>
+
+    <!-- ── PROGRESS ── -->
+    <div id="progress-tab" class="str-tab" style="display:none;">
+      <div id="progress-content"></div>
+    </div>
+
+    <!-- ── LOG ── -->
+    <div id="log-tab" class="str-tab" style="display:none;">
+      <div class="card">
+        <div class="card-title">Enregistrer une séance</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="str-date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Ressenti global (1–10)</label>
+            <input type="number" id="str-rpe" class="form-control" min="1" max="10" placeholder="7">
+          </div>
+        </div>
+        <div id="log-exercises"></div>
+        <div class="form-group" style="margin-top:12px;">
+          <label>Commentaire libre</label>
+          <textarea id="str-note" class="form-control" rows="2" placeholder="Fatigue, douleur, conditions, état d'esprit…" style="resize:vertical;"></textarea>
+        </div>
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="saveStrSession()">Enregistrer la séance</button>
+      </div>
+    </div>
+
+    <!-- ── HISTORY ── -->
+    <div id="history-tab" class="str-tab" style="display:none;">
+      <div class="card">
+        <div class="card-title">Historique des séances</div>
+        <div id="str-history-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /page-strength -->
+
 </main>
 </div>
 
@@ -697,6 +869,14 @@ function showPage(name) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   event.currentTarget.classList.add('active');
+  if (name === 'strength') {
+    // Reset all str-tabs, show today
+    document.querySelectorAll('.str-tab').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('[id^=stab-]').forEach(b => b.classList.remove('active'));
+    document.getElementById('today-tab').style.display = '';
+    document.getElementById('stab-today').classList.add('active');
+    renderStrToday();
+  }
 }
 
 let currentSubTab = 'dashboard';
@@ -1096,7 +1276,644 @@ function typeLabel(t) {
 // ═══════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════
-document.getElementById('run-date').value = today();
+
+// ═══════════════════════════════════════════════════════
+//  STRENGTH MODULE
+// ═══════════════════════════════════════════════════════
+
+// ── Data model ──
+// Each week entry: { weekStart:'YYYY-MM-DD', sessions:[{day,exercises:[{name,sets,reps,duration}],done:false,note,rpe}] }
+// Each exercise log: { date, exercises:[{name,sets,reps,duration,completed}], rpe, note }
+
+const SDB = {
+  get: (k, def) => { try { const v = localStorage.getItem('str_'+k); return v !== null ? JSON.parse(v) : def; } catch { return def; } },
+  set: (k,v) => { localStorage.setItem('str_'+k, JSON.stringify(v)); }
+};
+
+// ── Programme de base (tiré de l'image) ──
+// Pompes: ex 13-11-10 puis 11-9-7 en regression (données 25/05 = semaine de reprise)
+// Gainage: 2×65s | Abdos: 2×20 | Squats: 3×15 | Chaise: 2×30s (données historiques)
+
+const WEEKLY_SCHEDULE = {
+  lundi:    { label:'Lundi',    types:['P1/P2/P3','2×G','2×A'],  rest:false },
+  mardi:    { label:'Mardi',    types:['2×A'],                    rest:false },
+  mercredi: { label:'Mercredi', types:['Repos'],                  rest:true  },
+  jeudi:    { label:'Jeudi',    types:['3×S','2×C'],              rest:false },
+  vendredi: { label:'Vendredi', types:['P1/P2/P3','2×A'],        rest:false },
+  samedi:   { label:'Samedi',   types:['2×G','2×A'],              rest:false },
+  dimanche: { label:'Dimanche', types:['3×S','2×C'],              rest:false },
+};
+
+const EXERCISES = {
+  pompes: { name:'Pompes', badge:'ex-badge-push', cat:'Push',
+    tip:'Coude à 45° du corps. Descends jusqu\'à 2cm du sol. Expiration en poussant.',
+    coach:'Si le dernier set est trop facile (tu pourrais faire 3+ reps de plus), augmente d\'1 rep la semaine suivante.' },
+  gainage: { name:'Gainage', badge:'ex-badge-core', cat:'Core',
+    tip:'Bassin en légère rétroversion (pas les fesses en l\'air). Respiration abdominale.',
+    coach:'Ajoute 5s quand tu tiens la durée sans trembler sur les 2 dernières secondes.' },
+  abdos: { name:'Abdos (crunch bicycle)', badge:'ex-badge-core', cat:'Core',
+    tip:'Coude opposé genou, rotation de buste — pas de cou. Contrôle la descente.',
+    coach:'Augmente de 2 reps quand les dernières ne brûlent pas.' },
+  squats: { name:'Squats', badge:'ex-badge-legs', cat:'Jambes',
+    tip:'Pieds à la largeur des épaules, genoux dans l\'axe des orteils, descente jusqu\'à 90°.',
+    coach:'Ajoute 1 rep/set quand tu les fais sans brûlure notable dans le 3e set.' },
+  chaise: { name:'Chaise (isométrique)', badge:'ex-badge-iso', cat:'Iso',
+    tip:'Dos plaqué au mur, cuisses parallèles au sol, mains sur les genoux.',
+    coach:'Ajoute 5s quand tu tiens la durée sans trembler.' },
+};
+
+// Decode planning codes
+function decodeTypes(types) {
+  const out = [];
+  types.forEach(t => {
+    if (t === 'Repos') { out.push({ key:'rest', label:'Repos', badge:'badge-rest' }); return; }
+    if (t.includes('P')) out.push({ key:'pompes', label:'Pompes', badge:'ex-badge-push' });
+    if (t.includes('G')) out.push({ key:'gainage', label:'Gainage', badge:'ex-badge-core' });
+    if (t.includes('A')) out.push({ key:'abdos', label:'Abdos', badge:'ex-badge-core' });
+    if (t.includes('S')) out.push({ key:'squats', label:'Squats', badge:'ex-badge-legs' });
+    if (t.includes('C')) out.push({ key:'chaise', label:'Chaise', badge:'ex-badge-iso' });
+  });
+  // dedupe
+  const seen = new Set();
+  return out.filter(x => { if(seen.has(x.key)) return false; seen.add(x.key); return true; });
+}
+
+function getTodayDayKey() {
+  const days = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  return days[new Date().getDay()];
+}
+
+function strDayFr(d) {
+  const days = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  return days[d];
+}
+
+// ── Current programme (progressive overload) ──
+function getCurrentProg() {
+  const base = SDB.get('prog', {
+    pompes:  { sets:[13,11,10] },
+    gainage: { sets:[65,65], unit:'s' },
+    abdos:   { sets:[20,20] },
+    squats:  { sets:[15,15,15] },
+    chaise:  { sets:[30,30], unit:'s' },
+  });
+  return base;
+}
+
+function saveProg(p) { SDB.set('prog', p); }
+
+// ── Constance score ──
+function getConstanceScore() {
+  const logs = SDB.get('logs', []);
+  const today = new Date();
+  let total = 0, done = 0;
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const dayKey = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][d.getDay()];
+    if (!WEEKLY_SCHEDULE[dayKey].rest) {
+      total++;
+      if (logs.find(l => l.date === key)) done++;
+    }
+  }
+  // Streak
+  let streak = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const dayKey = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][d.getDay()];
+    if (WEEKLY_SCHEDULE[dayKey].rest) continue;
+    if (logs.find(l => l.date === key)) streak++;
+    else break;
+  }
+  return { done, total, pct: total ? Math.round(done/total*100) : 0, streak };
+}
+
+// ── Check if today is logged ──
+function isTodayLogged() {
+  const logs = SDB.get('logs', []);
+  const key = new Date().toISOString().split('T')[0];
+  return !!logs.find(l => l.date === key);
+}
+
+// ── Navigation ──
+function strShowTab(id) {
+  document.querySelectorAll('.str-tab').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('[id^=stab-]').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).style.display = '';
+  const map = {'today-tab':'stab-today','week-tab':'stab-week','progress-tab':'stab-progress','log-tab':'stab-log','history-tab':'stab-history'};
+  if (map[id]) document.getElementById(map[id]).classList.add('active');
+  if (id === 'today-tab') renderStrToday();
+  if (id === 'week-tab') renderStrWeek();
+  if (id === 'progress-tab') renderStrProgress();
+  if (id === 'log-tab') renderStrLog();
+  if (id === 'history-tab') renderStrHistory();
+}
+
+// ═══ RENDER TODAY ═══
+function renderStrToday() {
+  const prog = getCurrentProg();
+  const sc = getConstanceScore();
+  const dayKey = getTodayDayKey();
+  const sched = WEEKLY_SCHEDULE[dayKey];
+  const todayLogged = isTodayLogged();
+  const todayDate = new Date().toISOString().split('T')[0];
+  const logs = SDB.get('logs', []);
+  const todayLog = logs.find(l => l.date === todayDate);
+
+  // Update subtitle
+  const dayFr = strDayFr(new Date().getDay());
+  document.getElementById('str-subtitle').textContent =
+    `${dayFr} · Constance 7j : ${sc.pct}% · Streak : ${sc.streak} séance${sc.streak>1?'s':''} consécutive${sc.streak>1?'s':''}`;
+
+  // Metrics
+  document.getElementById('str-metrics').innerHTML = `
+    <div class="metric-box ${sc.pct>=80?'highlight':''}">
+      <div class="metric-label">Constance 7j</div>
+      <div class="metric-value" style="color:${sc.pct>=80?'var(--green)':sc.pct>=50?'var(--amber)':'var(--red)'};">${sc.pct}%</div>
+      <div class="metric-sub">${sc.done}/${sc.total} séances</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Streak actuel</div>
+      <div class="metric-value">${sc.streak}</div>
+      <div class="metric-sub">séance${sc.streak>1?'s':''} consécutive${sc.streak>1?'s':''}</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Total séances</div>
+      <div class="metric-value">${logs.length}</div>
+      <div class="metric-sub">depuis le début</div>
+    </div>
+    <div class="metric-box ${todayLogged?'highlight':''}">
+      <div class="metric-label">Aujourd'hui</div>
+      <div class="metric-value" style="font-size:20px;">${todayLogged?'✓':sched.rest?'😴':'⚡'}</div>
+      <div class="metric-sub">${todayLogged?'Séance faite':sched.rest?'Jour de repos':'À faire'}</div>
+    </div>
+  `;
+
+  // Today workout card
+  const card = document.getElementById('today-workout-card');
+  if (sched.rest) {
+    card.innerHTML = `
+      <div class="card-title">😴 Jour de repos — ${strDayFr(new Date().getDay())}</div>
+      <p style="color:var(--text2);font-size:13px;line-height:1.7;">Le repos est une partie du programme, pas une faiblesse. C'est pendant la récupération que les muscles se consolident (synthèse protéique). Hydrate-toi, dors bien, étire-toi légèrement si tu veux bouger.</p>
+      <div class="coach-tip">💡 Coach : Tu peux faire 5–10 min de mobilité (rotations hanches, épaules, chat/vache) sans compromettre la récup.</div>`;
+    document.getElementById('next-week-card').style.display = 'none';
+    return;
+  }
+
+  const exercises = decodeTypes(sched.types).filter(e => e.key !== 'rest');
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="card-title" style="margin:0;">💪 Séance du ${strDayFr(new Date().getDay())} ${todayLogged?'<span style="color:var(--green);font-size:11px;margin-left:8px;">✓ FAITE</span>':''}</div>
+    ${!todayLogged ? `<button class="btn btn-primary" onclick="quickLogToday()" style="font-size:12px;padding:6px 14px;">✓ Marquer comme faite</button>` : `<button class="btn btn-ghost" onclick="unlogToday()" style="font-size:12px;padding:6px 14px;">Annuler</button>`}
+  </div>`;
+
+  exercises.forEach(ex => {
+    const e = EXERCISES[ex.key];
+    const p = prog[ex.key];
+    if (!e || !p) return;
+    const isTime = p.unit === 's';
+    const checkKey = `check_${todayDate}_${ex.key}`;
+    const checkedSets = SDB.get(checkKey, []);
+
+    const setsHtml = p.sets.map((v, i) => {
+      const isDone = checkedSets.includes(i);
+      const label = isTime ? `${v}s` : `×${v}`;
+      return `<div class="set-chip ${isDone?'done':''}" onclick="toggleSet('${checkKey}',${i})" id="chip_${checkKey}_${i}">
+        <span>S${i+1} ${label}</span>
+      </div>`;
+    }).join('');
+
+    html += `<div class="ex-block">
+      <div class="ex-header">
+        <span class="ex-name">${e.name}</span>
+        <span class="ex-badge ${e.badge}">${e.cat}</span>
+      </div>
+      <div class="ex-sets">${setsHtml}</div>
+      <div class="ex-target">${p.sets.length} séries · ${isTime ? p.sets.map(v=>v+'s').join(' / ') : p.sets.map(v=>v+' reps').join(' / ')}</div>
+      <div class="ex-tip">🎯 ${e.tip}</div>
+      <div class="coach-tip">💪 Coach : ${e.coach}</div>
+    </div>`;
+  });
+
+  html += `<div style="margin-top:8px;padding:10px 0;border-top:1px solid var(--border);">
+    <button class="btn btn-ghost" onclick="strShowTab('log-tab')" style="font-size:12px;">Enregistrer en détail (poids, commentaires…)</button>
+  </div>`;
+
+  card.innerHTML = html;
+
+  // Next week suggestions
+  renderNextWeekCard();
+}
+
+function toggleSet(key, idx) {
+  const checked = SDB.get(key, []);
+  const i = checked.indexOf(idx);
+  if (i === -1) checked.push(idx);
+  else checked.splice(i, 1);
+  SDB.set(key, checked);
+  const chip = document.getElementById(`chip_${key}_${idx}`);
+  if (chip) chip.classList.toggle('done', checked.includes(idx));
+}
+
+function quickLogToday() {
+  const date = new Date().toISOString().split('T')[0];
+  const logs = SDB.get('logs', []);
+  if (logs.find(l => l.date === date)) return;
+  const dayKey = getTodayDayKey();
+  const prog = getCurrentProg();
+  const exercises = decodeTypes(WEEKLY_SCHEDULE[dayKey].types).filter(e=>e.key!=='rest');
+  logs.unshift({ id: uid(), date, exercises: exercises.map(e => ({ key:e.key, sets: prog[e.key]?.sets||[] })), rpe: null, note: '' });
+  SDB.set('logs', logs);
+  showToast('Séance cochée ✓');
+  renderStrToday();
+}
+
+function unlogToday() {
+  const date = new Date().toISOString().split('T')[0];
+  const logs = SDB.get('logs', []);
+  SDB.set('logs', logs.filter(l => l.date !== date));
+  showToast('Séance décochée');
+  renderStrToday();
+}
+
+// ═══ NEXT WEEK SUGGESTIONS ═══
+function renderNextWeekCard() {
+  const logs = SDB.get('logs', []);
+  const prog = getCurrentProg();
+  const card = document.getElementById('next-week-card');
+  const cont = document.getElementById('next-week-content');
+
+  // Need at least 3 sessions to suggest
+  if (logs.length < 2) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = '';
+
+  // Compute average RPE over last 3 sessions
+  const recent = logs.slice(0, 3).filter(l => l.rpe);
+  const avgRpe = recent.length ? recent.reduce((a,l) => a+l.rpe, 0)/recent.length : null;
+
+  // Build suggestions per exercise
+  const suggs = [];
+  Object.keys(prog).forEach(key => {
+    const e = EXERCISES[key];
+    const p = prog[key];
+    if (!e || !p) return;
+    const isTime = p.unit === 's';
+    let action = '', reason = '';
+
+    if (avgRpe !== null) {
+      if (avgRpe <= 5) {
+        // Too easy — increase
+        if (isTime) { action = `+5s par série`; reason = `Ressenti facile (RPE moyen ${avgRpe.toFixed(1)}/10)`; }
+        else { action = `+1 rep par série`; reason = `Ressenti facile (RPE moyen ${avgRpe.toFixed(1)}/10)`; }
+      } else if (avgRpe >= 8.5) {
+        // Too hard — maintain or reduce
+        action = `Maintenir les charges`; reason = `Effort intense (RPE ${avgRpe.toFixed(1)}/10) — consolide avant d'augmenter`;
+      } else {
+        // Normal — standard progression
+        if (isTime) { action = `+5s par série`; reason = `Progression standard (RPE ${avgRpe.toFixed(1)}/10)`; }
+        else { action = `+1 rep par série`; reason = `Progression standard (RPE ${avgRpe.toFixed(1)}/10)`; }
+      }
+    } else {
+      if (isTime) { action = `+5s par série`; reason = `Progression standard hebdomadaire`; }
+      else { action = `+1 rep par série`; reason = `Progression standard hebdomadaire`; }
+    }
+
+    const current = isTime ? p.sets.map(v=>v+'s').join(' / ') : p.sets.map(v=>v+' reps').join(' / ');
+    const nextSets = p.sets.map(v => isTime ? (v+5)+'s' : (v+1)+' reps');
+    const next = nextSets.join(' / ');
+
+    suggs.push({ name:e.name, current, next, action, reason, key, isTime });
+  });
+
+  cont.innerHTML = `
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">${avgRpe ? `RPE moyen 3 dernières séances : <strong style="color:var(--text)">${avgRpe.toFixed(1)}/10</strong>` : 'Enregistre des séances avec RPE pour des suggestions personnalisées.'}</div>
+    <table class="prog-table">
+      <thead><tr><th>Exercice</th><th>Cette semaine</th><th>Semaine prochaine</th><th>Action</th></tr></thead>
+      <tbody>
+        ${suggs.map(s => `<tr>
+          <td style="font-weight:500;color:var(--text);">${s.name}</td>
+          <td class="mono" style="font-size:12px;">${s.current}</td>
+          <td class="mono delta-pos" style="font-size:12px;">${s.next}</td>
+          <td><span style="font-size:11px;color:var(--text3);">${s.reason}</span></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="applyProgression()" style="font-size:12px;padding:6px 14px;">Appliquer la progression</button>
+      <button class="btn btn-ghost" onclick="keepProg()" style="font-size:12px;padding:6px 14px;">Garder cette semaine encore</button>
+    </div>`;
+}
+
+function applyProgression() {
+  const prog = getCurrentProg();
+  Object.keys(prog).forEach(key => {
+    const p = prog[key];
+    const isTime = p.unit === 's';
+    prog[key].sets = p.sets.map(v => isTime ? v+5 : v+1);
+  });
+  saveProg(prog);
+  showToast('Programme mis à jour ✓');
+  renderStrToday();
+}
+
+function keepProg() {
+  showToast('Programme inchangé — courage !');
+}
+
+// ═══ RENDER WEEK ═══
+function renderStrWeek() {
+  const prog = getCurrentProg();
+  const logs = SDB.get('logs', []);
+  const today = new Date().toISOString().split('T')[0];
+  const todayKey = getTodayDayKey();
+  const days = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+
+  // Get current week dates (lundi = start)
+  const now = new Date();
+  const dow = now.getDay(); // 0=sun
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+
+  let html = `<div class="card" style="padding:0;overflow:hidden;">
+    <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border);">
+      <div class="card-title" style="margin:0;">Planning de la semaine</div>
+    </div>`;
+
+  days.forEach((dayKey, i) => {
+    const sched = WEEKLY_SCHEDULE[dayKey];
+    const d = new Date(monday); d.setDate(monday.getDate() + i);
+    const dateStr = d.toISOString().split('T')[0];
+    const isToday = dayKey === todayKey;
+    const logged = logs.find(l => l.date === dateStr);
+    const exercises = decodeTypes(sched.types);
+
+    html += `<div class="day-plan-row ${isToday?'today-row':''}">
+      <div class="day-name ${isToday?'today':''}">
+        ${sched.label}
+        <div style="font-size:10px;color:var(--text3);margin-top:1px;">${d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</div>
+      </div>
+      <div>
+        <div class="workout-pills">
+          ${exercises.map(e => `<span class="workout-pill ${e.badge||''}" style="font-size:11px;">${e.label}</span>`).join('')}
+        </div>
+        ${!sched.rest ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;">
+          ${exercises.filter(e=>e.key!=='rest').map(e => {
+            const p = prog[e.key];
+            if (!p) return '';
+            const isTime = p.unit === 's';
+            return `<span style="margin-right:10px;font-family:'JetBrains Mono',monospace;">${e.label}: ${p.sets.map(v=>isTime?v+'s':v).join('–')}</span>`;
+          }).join('')}
+        </div>` : ''}
+      </div>
+      <div>
+        ${logged ? '<span style="color:var(--green);font-size:18px;">✓</span>' :
+          isToday && !sched.rest ? '<span style="color:var(--amber);font-size:13px;">⚡ Aujourd\'hui</span>' :
+          sched.rest ? '<span style="color:var(--text3);font-size:11px;">Repos</span>' :
+          d < now ? '<span style="color:var(--red);font-size:18px;">✗</span>' :
+          '<span style="color:var(--text3);font-size:11px;">—</span>'}
+      </div>
+    </div>`;
+  });
+
+  html += `</div>`;
+
+  // Weekly constance
+  const sc = getConstanceScore();
+  html += `<div class="metric-grid" style="margin-top:16px;">
+    <div class="metric-box">
+      <div class="metric-label">Séances cette semaine</div>
+      <div class="metric-value">${days.filter(k => {
+        const sched = WEEKLY_SCHEDULE[k];
+        if (sched.rest) return false;
+        const i = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'].indexOf(k);
+        const d = new Date(monday); d.setDate(monday.getDate() + i);
+        return logs.find(l => l.date === d.toISOString().split('T')[0]);
+      }).length}/${days.filter(k=>!WEEKLY_SCHEDULE[k].rest).length}</div>
+      <div class="metric-sub">jours actifs effectués</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-label">Streak</div>
+      <div class="metric-value">${sc.streak}</div>
+      <div class="metric-sub">séances consécutives</div>
+    </div>
+  </div>`;
+
+  document.getElementById('week-plan-content').innerHTML = html;
+}
+
+// ═══ RENDER PROGRESS ═══
+function renderStrProgress() {
+  const logs = SDB.get('logs', []);
+  const prog = getCurrentProg();
+
+  if (logs.length < 2) {
+    document.getElementById('progress-content').innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">📈</div><div class="empty-msg">Enregistre au moins 2 séances pour voir ta progression.</div></div></div>`;
+    return;
+  }
+
+  // Build progress table: compare first log vs last log
+  const first = logs[logs.length-1];
+  const last = logs[0];
+
+  let html = `<div class="card">
+    <div class="card-title">Évolution des charges</div>
+    <table class="prog-table">
+      <thead><tr><th>Exercice</th><th>Début</th><th>Actuel</th><th>Delta</th></tr></thead>
+      <tbody>`;
+
+  Object.keys(EXERCISES).forEach(key => {
+    const e = EXERCISES[key];
+    const p = prog[key];
+    if (!p) return;
+    const isTime = p.unit === 's';
+    const cur = p.sets.map(v => isTime?v+'s':v+' reps').join(' / ');
+
+    // Find first log that has this exercise
+    const firstEntry = logs.slice().reverse().find(l => l.exercises?.find(ex => ex.key === key));
+    const firstSets = firstEntry?.exercises?.find(ex => ex.key === key)?.sets || p.sets;
+    const firstStr = firstSets.map(v => isTime?v+'s':v+' reps').join(' / ');
+
+    const delta = p.sets.reduce((a,v,i) => a + (v - (firstSets[i]||v)), 0);
+    const deltaHtml = delta > 0 ? `<span class="delta-pos">+${delta}${isTime?'s':' reps'}</span>` :
+                      delta < 0 ? `<span class="delta-neg">${delta}${isTime?'s':' reps'}</span>` :
+                      `<span class="delta-neu">=</span>`;
+
+    html += `<tr>
+      <td style="font-weight:500;color:var(--text);">${e.name}</td>
+      <td class="mono" style="font-size:12px;color:var(--text3);">${firstStr}</td>
+      <td class="mono" style="font-size:12px;">${cur}</td>
+      <td>${deltaHtml}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  // RPE trend
+  const rpeData = logs.slice(0,10).reverse().filter(l=>l.rpe);
+  if (rpeData.length >= 2) {
+    html += `<div class="card">
+      <div class="card-title">Ressenti (RPE) — ${rpeData.length} dernières séances</div>
+      <div style="display:flex;align-items:flex-end;gap:8px;height:80px;margin-top:8px;">
+        ${rpeData.map(l => {
+          const h = Math.round(l.rpe/10*70);
+          const col = l.rpe<=5 ? 'var(--blue)' : l.rpe<=7 ? 'var(--green)' : l.rpe<=8.5 ? 'var(--amber)' : 'var(--red)';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <span style="font-size:10px;color:var(--text3);">${l.rpe}</span>
+            <div style="width:100%;height:${h}px;background:${col};border-radius:3px 3px 0 0;"></div>
+            <span style="font-size:9px;color:var(--text3);">${formatDate(l.date)}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;">Zone verte = RPE 6-7 idéal pour la progression en hypertrophie</div>
+    </div>`;
+  }
+
+  // All sessions summary
+  html += `<div class="card">
+    <div class="card-title">Dernières séances (${logs.length} au total)</div>
+    <table class="prog-table">
+      <thead><tr><th>Date</th><th>RPE</th><th>Note</th></tr></thead>
+      <tbody>
+        ${logs.slice(0,15).map(l => `<tr>
+          <td style="color:var(--text);">${formatDate(l.date)}</td>
+          <td>${l.rpe ? `<span style="color:${l.rpe<=5?'var(--blue)':l.rpe<=7?'var(--green)':l.rpe<=8.5?'var(--amber)':'var(--red)'};">${l.rpe}/10</span>` : '—'}</td>
+          <td style="font-size:12px;color:var(--text3);">${l.note||'—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+
+  document.getElementById('progress-content').innerHTML = html;
+}
+
+// ═══ RENDER LOG ═══
+function renderStrLog() {
+  const prog = getCurrentProg();
+  const dayKey = getTodayDayKey();
+  const exercises = decodeTypes(WEEKLY_SCHEDULE[dayKey].types).filter(e=>e.key!=='rest');
+  document.getElementById('str-date').value = new Date().toISOString().split('T')[0];
+
+  let html = '';
+  // Show all exercises for today's day, with ability to add sets/reps
+  const allExKeys = ['pompes','gainage','abdos','squats','chaise'];
+  allExKeys.forEach(key => {
+    const e = EXERCISES[key];
+    const p = prog[key];
+    if (!e || !p) return;
+    const isTime = p.unit === 's';
+    const isInToday = exercises.find(ex => ex.key === key);
+    html += `<div class="ex-block" style="${isInToday?'':'opacity:0.6;'}">
+      <div class="ex-header">
+        <span class="ex-name">${e.name} ${isInToday?'':'<span style="font-size:10px;color:var(--text3);">(hors programme aujourd\'hui)</span>'}</span>
+        <span class="ex-badge ${e.badge}">${e.cat}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">Programme actuel : ${p.sets.map(v=>isTime?v+'s':v+' reps').join(' / ')}</div>
+      <div id="log_sets_${key}">
+        ${p.sets.map((v, i) => `<div class="log-ex-row">
+          <div class="log-ex-label">Série ${i+1}</div>
+          <div class="form-group">
+            <label style="font-size:10px;">${isTime?'Durée (s)':'Reps'}</label>
+            <input type="number" class="form-control" id="log_${key}_${i}" value="${v}" min="0" style="font-family:'JetBrains Mono',monospace;">
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('log-exercises').innerHTML = html;
+}
+
+function saveStrSession() {
+  const date = document.getElementById('str-date').value;
+  const rpe = parseInt(document.getElementById('str-rpe').value) || null;
+  const note = document.getElementById('str-note').value.trim();
+
+  if (!date) { showToast('Date requise.', true); return; }
+
+  const prog = getCurrentProg();
+  const exerciseData = [];
+  const allExKeys = ['pompes','gainage','abdos','squats','chaise'];
+  allExKeys.forEach(key => {
+    const p = prog[key];
+    if (!p) return;
+    const sets = p.sets.map((v, i) => {
+      const inp = document.getElementById(`log_${key}_${i}`);
+      return inp ? (parseInt(inp.value) || v) : v;
+    });
+    exerciseData.push({ key, sets });
+    // Update prog with actual values
+    prog[key].sets = sets;
+  });
+  saveProg(prog);
+
+  const logs = SDB.get('logs', []);
+  // Remove existing log for same date
+  const filtered = logs.filter(l => l.date !== date);
+  filtered.unshift({ id: uid(), date, exercises: exerciseData, rpe, note });
+  SDB.set('logs', filtered);
+
+  showToast('Séance enregistrée et programme mis à jour ✓');
+  document.getElementById('str-rpe').value = '';
+  document.getElementById('str-note').value = '';
+  strShowTab('today-tab');
+}
+
+// ═══ RENDER HISTORY ═══
+function renderStrHistory() {
+  const logs = SDB.get('logs', []);
+  const prog = getCurrentProg();
+  if (!logs.length) {
+    document.getElementById('str-history-list').innerHTML = `<div class="empty"><div class="empty-icon">💪</div><div class="empty-msg">Aucune séance enregistrée. Commence dès aujourd'hui !</div></div>`;
+    return;
+  }
+
+  document.getElementById('str-history-list').innerHTML = logs.map(l => {
+    const exStr = (l.exercises||[]).map(ex => {
+      const e = EXERCISES[ex.key];
+      const p = prog[ex.key];
+      const isTime = p?.unit === 's';
+      return e ? `${e.name}: ${ex.sets.map(v=>isTime?v+'s':v).join('–')}` : '';
+    }).filter(Boolean).join(' · ');
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:start;">
+      <div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);">${formatDate(l.date)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px;font-family:'JetBrains Mono',monospace;">${exStr||'Séance enregistrée'}</div>
+        ${l.note ? `<div style="font-size:11px;color:var(--text2);margin-top:4px;font-style:italic;">"${l.note}"</div>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        ${l.rpe ? `<span style="font-size:12px;font-weight:600;color:${l.rpe<=5?'var(--blue)':l.rpe<=7?'var(--green)':l.rpe<=8.5?'var(--amber)':'var(--red)'};">${l.rpe}/10</span>` : ''}
+        <button class="btn-danger" onclick="deleteStrLog('${l.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteStrLog(id) {
+  const logs = SDB.get('logs', []);
+  SDB.set('logs', logs.filter(l => l.id !== id));
+  showToast('Séance supprimée');
+  renderStrHistory();
+}
+
+// ─── Seed initial prog from spreadsheet if not set ───
+(function seedStrProg() {
+  const existing = SDB.get('prog', null);
+  if (existing) return; // already seeded
+  // Semaine 25/05 : Pompes 11-9-7, Gainage 2×65s, Abdos 2×20, Squats 3×15
+  SDB.set('prog', {
+    pompes:  { sets:[11,9,7] },
+    gainage: { sets:[65,65], unit:'s' },
+    abdos:   { sets:[20,20] },
+    squats:  { sets:[15,15,15] },
+    chaise:  { sets:[30,30], unit:'s' },
+  });
+})();
+
+
 document.getElementById('rec-date').value = today();
 renderDashboard();
 </script>
