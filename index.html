@@ -447,6 +447,51 @@ select.form-control option { background: var(--bg3); }
 .delta-neg { color:var(--red); font-weight:600; }
 .delta-neu { color:var(--text3); }
 
+/* ── Volume summary ── */
+.vol-row { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); }
+.vol-row:last-child { border-bottom:none; }
+.vol-ex-name { font-size:13px; font-weight:600; color:var(--text); min-width:130px; }
+.vol-sets { font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--text); }
+.vol-delta { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; padding:2px 8px; border-radius:6px; }
+.vol-delta.pos { color:#00E87A; background:rgba(0,232,122,0.12); }
+.vol-delta.neu { color:var(--text3); background:var(--bg4); }
+.vol-delta.neg { color:var(--red); background:rgba(255,92,92,0.1); }
+.vol-total { font-size:11px; color:var(--text3); margin-top:1px; }
+
+/* ── End of week prompt ── */
+.eow-title { font-size:15px; font-weight:600; color:var(--text); margin-bottom:6px; }
+.eow-sub { font-size:12px; color:var(--text3); margin-bottom:16px; }
+.feeling-btns { display:flex; gap:10px; flex-wrap:wrap; }
+.feeling-btn {
+  flex:1; min-width:100px;
+  padding:12px 10px; border-radius:var(--radius-sm); border:2px solid var(--border2);
+  background:var(--bg3); color:var(--text2); font-size:13px; font-weight:500;
+  cursor:pointer; text-align:center; transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.feeling-btn:hover { border-color:var(--green); color:var(--text); }
+.feeling-btn.selected { border-color:var(--green); background:var(--green-dim); color:var(--green); }
+.feeling-result { margin-top:14px; padding:12px 14px; background:var(--bg); border-radius:var(--radius-sm); border-left:3px solid var(--green); font-size:13px; line-height:1.7; }
+
+/* ── Muscle map ── */
+.muscle-map-wrap { display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap; }
+.muscle-svg-area { flex:0 0 auto; }
+.muscle-legend { flex:1; min-width:200px; }
+.muscle-legend-title { font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text3); margin-bottom:10px; }
+.muscle-legend-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid var(--border); }
+.muscle-legend-row:last-child { border-bottom:none; }
+.muscle-legend-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.muscle-legend-name { font-size:12px; font-weight:500; color:var(--text); flex:1; }
+.muscle-legend-grade { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700; }
+.muscle-legend-sub { font-size:10px; color:var(--text3); margin-top:1px; }
+.grade-f { color:#FF5C5C; }
+.grade-d { color:#FF8C42; }
+.grade-c { color:#FFB347; }
+.grade-b { color:#C9E265; }
+.grade-a { color:#00E87A; }
+.grade-s { color:#00CFFF; }
+.grade-ss { color:#B57BFF; }
+.grade-sss { color:#FFD700; }
+
 /* Log exercise inputs */
 .log-ex-row { display:grid; grid-template-columns:1fr 80px 80px; gap:8px; align-items:end; margin-bottom:8px; }
 .log-ex-label { font-size:12px; font-weight:600; color:var(--text); padding:9px 0 0; }
@@ -731,10 +776,26 @@ select.form-control option { background: var(--bg3); }
         <div id="today-workout-content"></div>
       </div>
 
+      <!-- Weekly volume summary with deltas -->
+      <div class="card" id="volume-summary-card">
+        <div id="volume-summary-content"></div>
+      </div>
+
+      <!-- End-of-week feeling prompt -->
+      <div class="card" id="eow-card" style="display:none;">
+        <div id="eow-content"></div>
+      </div>
+
       <!-- Next week adjustments -->
       <div class="card" id="next-week-card" style="display:none;">
         <div class="card-title">📈 Ajustements semaine prochaine</div>
         <div id="next-week-content"></div>
+      </div>
+
+      <!-- Muscle map -->
+      <div class="card" id="muscle-map-card">
+        <div class="card-title">🧬 Carte musculaire · Niveau estimé</div>
+        <div id="muscle-map-content"></div>
       </div>
 
     </div>
@@ -1458,6 +1519,9 @@ function renderStrToday() {
       <p style="color:var(--text2);font-size:13px;line-height:1.7;">Le repos est une partie du programme, pas une faiblesse. C'est pendant la récupération que les muscles se consolident (synthèse protéique). Hydrate-toi, dors bien, étire-toi légèrement si tu veux bouger.</p>
       <div class="coach-tip">💡 Coach : Tu peux faire 5–10 min de mobilité (rotations hanches, épaules, chat/vache) sans compromettre la récup.</div>`;
     document.getElementById('next-week-card').style.display = 'none';
+    renderVolumeSummary();
+    renderEowCard();
+    renderMuscleMap();
     return;
   }
 
@@ -1502,8 +1566,11 @@ function renderStrToday() {
 
   card.innerHTML = html;
 
-  // Next week suggestions
+  // Additional blocks
   renderNextWeekCard();
+  renderVolumeSummary();
+  renderEowCard();
+  renderMuscleMap();
 }
 
 function toggleSet(key, idx) {
@@ -1622,6 +1689,417 @@ function applyProgression() {
 
 function keepProg() {
   showToast('Programme inchangé — courage !');
+}
+
+// ═══ VOLUME SUMMARY (résumé + delta semaine précédente) ═══
+function renderVolumeSummary() {
+  const prog = getCurrentProg();
+  const prevProg = SDB.get('prev_prog', null);
+  const el = document.getElementById('volume-summary-content');
+
+  const rows = Object.keys(EXERCISES).map(key => {
+    const e = EXERCISES[key];
+    const p = prog[key];
+    const prev = prevProg ? prevProg[key] : null;
+    if (!e || !p) return '';
+    const isTime = p.unit === 's';
+
+    const setsStr = p.sets.map(v => isTime ? v + 's' : v).join(' / ');
+    const totalVol = p.sets.reduce((a,v) => a+v, 0);
+    const unit = isTime ? 's' : ' reps';
+
+    let deltaHtml = '';
+    if (prev) {
+      const deltas = p.sets.map((v,i) => v - (prev.sets[i] ?? v));
+      const allZero = deltas.every(d => d === 0);
+      const sign = deltas[0] > 0 ? '+' : '';
+      const deltaStr = allZero ? '=' : deltas.map(d => (d>0?'+':'')+d+(isTime?'s':'')).join(' / ');
+      const cls = allZero ? 'neu' : (deltas[0]>0 ? 'pos' : 'neg');
+      deltaHtml = `<span class="vol-delta ${cls}">${deltaStr}</span>`;
+    } else {
+      deltaHtml = `<span class="vol-delta neu">semaine 1</span>`;
+    }
+
+    return `<div class="vol-row">
+      <div>
+        <div class="vol-ex-name">${e.name}</div>
+        <div class="vol-total">${p.sets.length} séries · total ${totalVol}${unit}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="vol-sets">${setsStr}</span>
+        ${deltaHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="card-title" style="margin-bottom:10px;">📊 Volume de la semaine</div>${rows}`;
+}
+
+// ═══ END-OF-WEEK FEELING PROMPT ═══
+// Show on Friday, Saturday, Sunday
+function isEndOfWeek() {
+  const dow = new Date().getDay(); // 5=Fri, 6=Sat, 0=Sun
+  return dow === 5 || dow === 6 || dow === 0;
+}
+
+function renderEowCard() {
+  const card = document.getElementById('eow-card');
+  if (!isEndOfWeek()) { card.style.display = 'none'; return; }
+
+  // Check if already answered this week
+  const now = new Date();
+  const weekKey = `eow_${now.getFullYear()}_${getWeekNum(now)}`;
+  const answered = SDB.get(weekKey, null);
+
+  if (answered) {
+    card.style.display = '';
+    document.getElementById('eow-content').innerHTML = `
+      <div class="eow-title">✅ Bilan de semaine enregistré</div>
+      <div class="feeling-result">${answered.resultText}</div>
+      <button class="btn btn-ghost" style="margin-top:10px;font-size:12px;" onclick="resetEow('${weekKey}')">Modifier</button>`;
+    return;
+  }
+
+  card.style.display = '';
+  document.getElementById('eow-content').innerHTML = `
+    <div class="eow-title">🎯 Bilan de fin de semaine</div>
+    <div class="eow-sub">Comment s'est passé l'entraînement cette semaine ?</div>
+    <div class="feeling-btns">
+      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','too_easy')">😎 Trop facile<br><span style="font-size:10px;color:var(--text3);">J'aurais pu faire bien plus</span></button>
+      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','easy')">💪 Facile<br><span style="font-size:10px;color:var(--text3);">Encore de la marge</span></button>
+      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','good')">🔥 Parfait<br><span style="font-size:10px;color:var(--text3);">Bien challengé</span></button>
+      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','hard')">😤 Dur<br><span style="font-size:10px;color:var(--text3);">Limite mais tenu</span></button>
+      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','too_hard')">🥵 Trop dur<br><span style="font-size:10px;color:var(--text3);">Forme dégradée</span></button>
+    </div>`;
+}
+
+function selectFeeling(weekKey, feeling) {
+  const prog = getCurrentProg();
+  // Save current as prev
+  SDB.set('prev_prog', JSON.parse(JSON.stringify(prog)));
+
+  const PALIERS = {
+    pompes:  { stayAt: [20,18,16], maxSets: [30,28,26] },
+    gainage: { stayAt: [120], maxSets: [180] },
+    abdos:   { stayAt: [30,30], maxSets: [50,50] },
+    squats:  { stayAt: [25,25,25], maxSets: [40,40,40] },
+    chaise:  { stayAt: [90,90], maxSets: [120,120] },
+  };
+
+  const actions = {};
+  let resultLines = [];
+
+  if (feeling === 'too_easy') {
+    // +2 reps / +10s
+    Object.keys(prog).forEach(key => {
+      const p = prog[key];
+      const isTime = p.unit === 's';
+      const pal = PALIERS[key];
+      const inc = isTime ? 10 : 2;
+      const newSets = p.sets.map((v,i) => {
+        const max = pal?.maxSets?.[i] ?? 999;
+        return Math.min(v + inc, max);
+      });
+      const changed = newSets.some((v,i) => v !== p.sets[i]);
+      actions[key] = { prev: [...p.sets], next: newSets, changed };
+      prog[key].sets = newSets;
+    });
+    resultLines.push('Semaine trop facile → progression accélérée (+2 reps / +10s).');
+  } else if (feeling === 'easy') {
+    // +1 rep / +5s, check paliers
+    Object.keys(prog).forEach(key => {
+      const p = prog[key];
+      const isTime = p.unit === 's';
+      const pal = PALIERS[key];
+      const inc = isTime ? 5 : 1;
+      const atPalier = pal?.stayAt && p.sets.every((v,i) => v >= (pal.stayAt[i]??9999));
+      if (atPalier) {
+        actions[key] = { prev: [...p.sets], next: [...p.sets], changed: false, locked: true };
+        resultLines.push(`${EXERCISES[key]?.name} : palier atteint (${p.sets.join('/')}${isTime?'s':' reps'}) — maintien.`);
+      } else {
+        const newSets = p.sets.map((v,i) => {
+          const max = pal?.maxSets?.[i] ?? 999;
+          return Math.min(v + inc, max);
+        });
+        actions[key] = { prev: [...p.sets], next: newSets, changed: true };
+        prog[key].sets = newSets;
+      }
+    });
+    resultLines.unshift('Bonne semaine → progression standard (+1 rep / +5s).');
+  } else if (feeling === 'good') {
+    // +1 rep / +5s standard
+    Object.keys(prog).forEach(key => {
+      const p = prog[key];
+      const isTime = p.unit === 's';
+      const inc = isTime ? 5 : 1;
+      const newSets = p.sets.map(v => v + inc);
+      actions[key] = { prev: [...p.sets], next: newSets, changed: true };
+      prog[key].sets = newSets;
+    });
+    resultLines.push('Semaine parfaite → progression standard appliquée.');
+  } else if (feeling === 'hard') {
+    // Maintain
+    Object.keys(prog).forEach(key => {
+      actions[key] = { prev: [...prog[key].sets], next: [...prog[key].sets], changed: false };
+    });
+    resultLines.push('Semaine difficile → on consolide. Même programme la semaine prochaine. Récupère bien (sommeil, protéines).');
+  } else if (feeling === 'too_hard') {
+    // -1 or deload ~10%
+    Object.keys(prog).forEach(key => {
+      const p = prog[key];
+      const isTime = p.unit === 's';
+      const newSets = p.sets.map(v => Math.max(isTime ? v-5 : v-1, isTime?20:5));
+      actions[key] = { prev: [...p.sets], next: newSets, changed: true };
+      prog[key].sets = newSets;
+    });
+    resultLines.push('Semaine trop dure → décharge légère (-1 rep / -5s). C\'est normal, le corps a besoin de cycles de récupération.');
+  }
+
+  saveProg(prog);
+
+  // Build result text
+  const changeLines = Object.keys(actions).map(key => {
+    const a = actions[key];
+    const e = EXERCISES[key];
+    const isTime = prog[key].unit === 's';
+    const u = isTime ? 's' : '';
+    if (!e) return '';
+    if (a.locked) return `${e.name} : 🔒 palier (${a.prev.join('/')}${u}) — maintenu`;
+    const delta = a.next.map((v,i) => (v - a.prev[i]));
+    const sign = delta[0] > 0 ? '+' : '';
+    const dStr = delta.every(d=>d===0) ? 'inchangé' : delta.map(d=>(d>0?'+':'')+d+u).join('/');
+    return `${e.name} : ${a.prev.join('/')}${u} → ${a.next.join('/')}${u} <span style="color:var(--green);">(${dStr})</span>`;
+  }).filter(Boolean).join('<br>');
+
+  const resultText = `<strong>${resultLines.join(' ')}</strong><br><br>${changeLines}`;
+  SDB.set(weekKey, { feeling, resultText });
+
+  renderEowCard();
+  renderVolumeSummary();
+  showToast('Bilan enregistré, programme mis à jour ✓');
+}
+
+function resetEow(weekKey) {
+  localStorage.removeItem('str_'+weekKey);
+  renderEowCard();
+}
+
+// ═══ MUSCLE MAP ═══
+// Grade system based on total volume/reps reached
+// Reference benchmarks (body weight, no equipment):
+// Pompes: F<5 D5-10 C10-15 B15-20 A20-25 S25-30 SS30-40 S+++40+
+// (per set max)
+function getMuscleGrades() {
+  const prog = getCurrentProg();
+  const logs = SDB.get('logs', []);
+
+  // Score based on current programme level
+  function gradeScore(key) {
+    const p = prog[key];
+    if (!p) return 0;
+    const isTime = p.unit === 's';
+    const max = Math.max(...p.sets);
+    // Normalize: each exercise has different reference scale
+    const scales = {
+      pompes:  [5,10,15,20,25,30,40,Infinity],   // reps
+      gainage: [20,30,45,60,90,120,150,Infinity], // seconds
+      abdos:   [5,10,15,20,25,30,40,Infinity],    // reps
+      squats:  [10,15,20,25,30,35,45,Infinity],   // reps
+      chaise:  [20,30,45,60,90,120,150,Infinity], // seconds
+    };
+    const sc = scales[key] || [10,20,30,40,50,60,80,Infinity];
+    let idx = sc.findIndex(t => max < t);
+    if (idx === -1) idx = 7;
+    return idx; // 0=F, 1=D, 2=C, 3=B, 4=A, 5=S, 6=SS, 7=S+++
+  }
+
+  const GRADE_LABELS = ['F','D','C','B','A','S','S+','S++'];
+  const GRADE_COLORS = ['#FF5C5C','#FF8C42','#FFB347','#C9E265','#00E87A','#00CFFF','#B57BFF','#FFD700'];
+  const GRADE_CLASSES = ['grade-f','grade-d','grade-c','grade-b','grade-a','grade-s','grade-ss','grade-sss'];
+  const GRADE_DESC = [
+    'Débutant absolu','Débutant','Intermédiaire bas','Intermédiaire',
+    'Intermédiaire haut','Avancé','Expert','Elite'
+  ];
+
+  const muscles = {
+    pectoraux:    { key:'pompes',  label:'Pectoraux',    idx: gradeScore('pompes') },
+    triceps:      { key:'pompes',  label:'Triceps',      idx: Math.max(0, gradeScore('pompes')-1) },
+    deltoides:    { key:'pompes',  label:'Deltoïdes ant.',idx: Math.max(0, gradeScore('pompes')-1) },
+    abdominaux:   { key:'abdos',   label:'Abdominaux',   idx: gradeScore('abdos') },
+    obliques:     { key:'abdos',   label:'Obliques',     idx: Math.max(0, gradeScore('abdos')-1) },
+    lombaires:    { key:'gainage', label:'Lombaires',    idx: gradeScore('gainage') },
+    core:         { key:'gainage', label:'Core profond', idx: gradeScore('gainage') },
+    quadriceps:   { key:'squats',  label:'Quadriceps',   idx: gradeScore('squats') },
+    fessiers:     { key:'squats',  label:'Fessiers',     idx: gradeScore('squats') },
+    ischiojambiers:{ key:'squats', label:'Ischio-jamb.', idx: Math.max(0, gradeScore('squats')-1) },
+    quadsCh:      { key:'chaise',  label:'Quad. (iso)',  idx: gradeScore('chaise') },
+  };
+
+  return { muscles, GRADE_LABELS, GRADE_COLORS, GRADE_CLASSES, GRADE_DESC };
+}
+
+function renderMuscleMap() {
+  const { muscles, GRADE_LABELS, GRADE_COLORS, GRADE_CLASSES, GRADE_DESC } = getMuscleGrades();
+
+  // Group muscles by body part for the SVG color mapping
+  const getColor = (key) => {
+    const m = muscles[key];
+    return m ? GRADE_COLORS[m.idx] : '#232927';
+  };
+  const getAlpha = (key) => {
+    const m = muscles[key];
+    const idx = m ? m.idx : 0;
+    return 0.3 + (idx/7)*0.65;
+  };
+
+  // SVG body figure — simplified anatomical front+back
+  const svgFront = `<svg viewBox="0 0 130 280" width="130" height="280" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 8px rgba(0,0,0,0.5));">
+  <defs>
+    <radialGradient id="bodyGrad" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#2a3330"/>
+      <stop offset="100%" stop-color="#151918"/>
+    </radialGradient>
+  </defs>
+  <!-- Body outline -->
+  <ellipse cx="65" cy="30" rx="16" ry="18" fill="#1C2120" stroke="#334040" stroke-width="1.2"/>
+  <!-- Neck -->
+  <rect x="59" y="44" width="12" height="10" rx="3" fill="#1C2120" stroke="#334040" stroke-width="1"/>
+  <!-- Torso -->
+  <path d="M40,54 Q30,60 28,80 L26,130 Q30,138 65,138 Q100,138 104,130 L102,80 Q100,60 90,54 Z" fill="url(#bodyGrad)" stroke="#334040" stroke-width="1.2"/>
+  <!-- Pectoraux -->
+  <path d="M42,58 Q48,62 62,65 Q62,75 50,80 Q38,76 38,68 Z" fill="${getColor('pectoraux')}" opacity="${getAlpha('pectoraux')}"/>
+  <path d="M88,58 Q82,62 68,65 Q68,75 80,80 Q92,76 92,68 Z" fill="${getColor('pectoraux')}" opacity="${getAlpha('pectoraux')}"/>
+  <!-- Deltoïdes -->
+  <ellipse cx="36" cy="66" rx="9" ry="12" fill="${getColor('deltoides')}" opacity="${getAlpha('deltoides')}"/>
+  <ellipse cx="94" cy="66" rx="9" ry="12" fill="${getColor('deltoides')}" opacity="${getAlpha('deltoides')}"/>
+  <!-- Abdominaux (6-pack) -->
+  <rect x="55" y="83" width="8" height="9" rx="2" fill="${getColor('abdominaux')}" opacity="${getAlpha('abdominaux')}"/>
+  <rect x="67" y="83" width="8" height="9" rx="2" fill="${getColor('abdominaux')}" opacity="${getAlpha('abdominaux')}"/>
+  <rect x="55" y="95" width="8" height="9" rx="2" fill="${getColor('abdominaux')}" opacity="${getAlpha('abdominaux')}"/>
+  <rect x="67" y="95" width="8" height="9" rx="2" fill="${getColor('abdominaux')}" opacity="${getAlpha('abdominaux')}"/>
+  <rect x="55" y="107" width="8" height="9" rx="2" fill="${getColor('abdominaux')}" opacity="${getAlpha('abdominaux')}"/>
+  <rect x="67" y="107" width="8" height="9" rx="2" fill="${getColor('abdominaux')}" opacity="${getAlpha('abdominaux')}"/>
+  <!-- Obliques -->
+  <path d="M42,88 Q50,95 50,118 Q42,122 38,110 Z" fill="${getColor('obliques')}" opacity="${getAlpha('obliques')}"/>
+  <path d="M88,88 Q80,95 80,118 Q88,122 92,110 Z" fill="${getColor('obliques')}" opacity="${getAlpha('obliques')}"/>
+  <!-- Arms (triceps front visible) -->
+  <path d="M27,78 Q18,88 20,112 Q24,118 34,112 Q36,100 36,80 Z" fill="${getColor('triceps')}" opacity="${getAlpha('triceps')*0.7}"/>
+  <path d="M103,78 Q112,88 110,112 Q106,118 96,112 Q94,100 94,80 Z" fill="${getColor('triceps')}" opacity="${getAlpha('triceps')*0.7}"/>
+  <!-- Forearms -->
+  <path d="M20,112 Q16,130 18,148 Q22,150 30,148 Q34,130 34,112 Z" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <path d="M110,112 Q114,130 112,148 Q108,150 100,148 Q96,130 96,112 Z" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <!-- Hands -->
+  <ellipse cx="19" cy="153" rx="7" ry="6" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <ellipse cx="111" cy="153" rx="7" ry="6" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <!-- Hip/pelvis -->
+  <path d="M34,130 Q34,140 65,142 Q96,140 96,130 L102,130 Q100,145 65,147 Q30,145 28,130 Z" fill="#1C2120" stroke="#334040" stroke-width="1"/>
+  <!-- Quadriceps -->
+  <path d="M36,144 Q30,155 30,190 Q38,198 50,196 Q58,180 56,145 Z" fill="${getColor('quadriceps')}" opacity="${getAlpha('quadriceps')}"/>
+  <path d="M94,144 Q100,155 100,190 Q92,198 80,196 Q72,180 74,145 Z" fill="${getColor('quadriceps')}" opacity="${getAlpha('quadriceps')}"/>
+  <!-- Knee -->
+  <ellipse cx="41" cy="200" rx="11" ry="8" fill="#1C2120" stroke="#334040" stroke-width="1"/>
+  <ellipse cx="89" cy="200" rx="11" ry="8" fill="#1C2120" stroke="#334040" stroke-width="1"/>
+  <!-- Tibia/shin -->
+  <path d="M31,206 Q28,230 30,258 Q36,262 46,258 Q48,232 50,206 Z" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <path d="M99,206 Q102,230 100,258 Q94,262 84,258 Q82,232 80,206 Z" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <!-- Feet -->
+  <ellipse cx="38" cy="263" rx="12" ry="6" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <ellipse cx="92" cy="263" rx="12" ry="6" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <!-- Label FRONT -->
+  <text x="65" y="278" text-anchor="middle" fill="#334040" font-size="8" font-family="sans-serif">AVANT</text>
+</svg>`;
+
+  const svgBack = `<svg viewBox="0 0 130 280" width="130" height="280" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 8px rgba(0,0,0,0.5));">
+  <!-- Body outline back -->
+  <ellipse cx="65" cy="30" rx="16" ry="18" fill="#1C2120" stroke="#334040" stroke-width="1.2"/>
+  <rect x="59" y="44" width="12" height="10" rx="3" fill="#1C2120" stroke="#334040" stroke-width="1"/>
+  <path d="M40,54 Q30,60 28,80 L26,130 Q30,138 65,138 Q100,138 104,130 L102,80 Q100,60 90,54 Z" fill="url(#bodyGrad)" stroke="#334040" stroke-width="1.2"/>
+  <!-- Trapèzes -->
+  <path d="M52,54 Q65,58 78,54 Q82,64 65,68 Q48,64 52,54 Z" fill="${getColor('deltoides')}" opacity="${getAlpha('deltoides')}"/>
+  <!-- Dorsaux -->
+  <path d="M38,70 Q44,90 52,118 L65,122 L78,118 Q86,90 92,70 Q82,62 65,64 Q48,62 38,70 Z" fill="${getColor('lombaires')}" opacity="${getAlpha('lombaires')*0.8}"/>
+  <!-- Lombaires -->
+  <path d="M50,118 Q55,128 65,130 Q75,128 80,118 Q72,115 65,116 Q58,115 50,118 Z" fill="${getColor('lombaires')}" opacity="${getAlpha('lombaires')}"/>
+  <!-- Deltoïdes arrière -->
+  <ellipse cx="36" cy="66" rx="9" ry="12" fill="${getColor('deltoides')}" opacity="${getAlpha('deltoides')}"/>
+  <ellipse cx="94" cy="66" rx="9" ry="12" fill="${getColor('deltoides')}" opacity="${getAlpha('deltoides')}"/>
+  <!-- Triceps back -->
+  <path d="M27,78 Q18,90 20,112 Q26,116 34,112 Q36,98 36,80 Z" fill="${getColor('triceps')}" opacity="${getAlpha('triceps')}"/>
+  <path d="M103,78 Q112,90 110,112 Q104,116 96,112 Q94,98 94,80 Z" fill="${getColor('triceps')}" opacity="${getAlpha('triceps')}"/>
+  <!-- Forearms -->
+  <path d="M20,112 Q16,130 18,148 Q22,150 30,148 Q34,130 34,112 Z" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <path d="M110,112 Q114,130 112,148 Q108,150 100,148 Q96,130 96,112 Z" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <ellipse cx="19" cy="153" rx="7" ry="6" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <ellipse cx="111" cy="153" rx="7" ry="6" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <!-- Fessiers -->
+  <path d="M34,132 Q36,148 50,152 Q65,154 65,154 Q65,154 80,152 Q94,148 96,132 Q80,140 65,141 Q50,140 34,132 Z" fill="${getColor('fessiers')}" opacity="${getAlpha('fessiers')}"/>
+  <!-- Ischio-jambiers -->
+  <path d="M36,150 Q30,170 32,196 Q40,202 52,198 Q58,176 56,152 Z" fill="${getColor('ischiojambiers')}" opacity="${getAlpha('ischiojambiers')}"/>
+  <path d="M94,150 Q100,170 98,196 Q90,202 78,198 Q72,176 74,152 Z" fill="${getColor('ischiojambiers')}" opacity="${getAlpha('ischiojambiers')}"/>
+  <!-- Mollets -->
+  <path d="M32,202 Q28,222 30,248 Q36,252 46,248 Q50,222 48,202 Z" fill="${getColor('quadsCh')}" opacity="${getAlpha('quadsCh')*0.7}"/>
+  <path d="M98,202 Q102,222 100,248 Q94,252 84,248 Q80,222 82,202 Z" fill="${getColor('quadsCh')}" opacity="${getAlpha('quadsCh')*0.7}"/>
+  <ellipse cx="41" cy="200" rx="11" ry="8" fill="#1C2120" stroke="#334040" stroke-width="1"/>
+  <ellipse cx="89" cy="200" rx="11" ry="8" fill="#1C2120" stroke="#334040" stroke-width="1"/>
+  <path d="M31,206 Q28,230 30,258 Q36,262 46,258 Q48,232 50,206 Z" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <path d="M99,206 Q102,230 100,258 Q94,262 84,258 Q82,232 80,206 Z" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <ellipse cx="38" cy="263" rx="12" ry="6" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <ellipse cx="92" cy="263" rx="12" ry="6" fill="#1a2220" stroke="#334040" stroke-width="0.8"/>
+  <text x="65" y="278" text-anchor="middle" fill="#334040" font-size="8" font-family="sans-serif">ARRIÈRE</text>
+</svg>`;
+
+  // Build legend (deduplicated by exercise)
+  const shown = new Set();
+  const legendRows = Object.entries(muscles).map(([key, m]) => {
+    if (shown.has(m.key)) return '';
+    shown.add(m.key);
+    const grade = GRADE_LABELS[m.idx];
+    const color = GRADE_COLORS[m.idx];
+    const cls = GRADE_CLASSES[m.idx];
+    const desc = GRADE_DESC[m.idx];
+    const e = EXERCISES[m.key];
+    const prog = getCurrentProg();
+    const p = prog[m.key];
+    const isTime = p?.unit === 's';
+    const cur = p ? p.sets.map(v=>isTime?v+'s':v+' reps').join(' / ') : '';
+    return `<div class="muscle-legend-row">
+      <div class="muscle-legend-dot" style="background:${color};box-shadow:0 0 6px ${color}44;"></div>
+      <div>
+        <div class="muscle-legend-name">${e?.name || key}</div>
+        <div class="muscle-legend-sub">${cur}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="muscle-legend-grade ${cls}">${grade}</div>
+        <div class="muscle-legend-sub">${desc}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Grade scale legend
+  const scaleHtml = ['F','D','C','B','A','S','S+','S++'].map((g,i) => {
+    const c = GRADE_COLORS[i];
+    return `<div style="display:flex;align-items:center;gap:4px;font-size:10px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${c};"></div>
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${c};">${g}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('muscle-map-content').innerHTML = `
+    <div class="muscle-map-wrap">
+      <div class="muscle-svg-area" style="display:flex;gap:12px;">
+        ${svgFront}
+        ${svgBack}
+      </div>
+      <div class="muscle-legend">
+        <div class="muscle-legend-title">Niveau par muscle</div>
+        ${legendRows}
+        <div style="margin-top:14px;padding:10px;background:var(--bg);border-radius:6px;">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.6px;">Échelle de notation</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">${scaleHtml}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px;">Basé sur les standards de performance en poids de corps (sans matériel)</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ═══ RENDER WEEK ═══
