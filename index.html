@@ -450,13 +450,16 @@ select.form-control option { background: var(--bg3); }
 /* ── Today page 2-col layout ── */
 .today-top-row {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-bottom: 16px;
-  align-items: start;
+  align-items: stretch;
 }
-.today-left-card { margin-bottom: 0 !important; }
-.today-right-col { display: flex; flex-direction: column; }
+.today-left-card { margin-bottom: 0 !important; display:flex; flex-direction:column; }
+.today-right-col { display: flex; flex-direction: column; gap: 16px; }
+#volume-summary-card { flex: 1; margin-bottom: 0 !important; overflow-y: auto; }
+#eow-card { flex: 0 0 auto; margin-bottom: 0 !important; }
+#next-week-card { flex: 0 0 auto; margin-bottom: 0 !important; }
 @media (max-width: 900px) {
   .today-top-row { grid-template-columns: 1fr; }
 }
@@ -798,12 +801,12 @@ select.form-control option { background: var(--bg3); }
         <div class="today-right-col">
 
           <!-- Weekly volume summary with deltas -->
-          <div class="card" id="volume-summary-card" style="margin-bottom:16px;">
+          <div class="card" id="volume-summary-card">
             <div id="volume-summary-content"></div>
           </div>
 
           <!-- End-of-week feeling prompt -->
-          <div class="card" id="eow-card" style="display:none;margin-bottom:16px;">
+          <div class="card" id="eow-card" style="display:none;">
             <div id="eow-content"></div>
           </div>
 
@@ -1964,203 +1967,286 @@ function getMuscleGrades() {
 
 function renderMuscleMap() {
   const { muscles, GRADE_LABELS, GRADE_COLORS, GRADE_CLASSES, GRADE_DESC } = getMuscleGrades();
+  const gc = (key) => { const m = muscles[key]; return m ? GRADE_COLORS[m.idx] : 'none'; };
+  const ga = (key) => { const m = muscles[key]; const i = m ? m.idx : 0; return 0.15 + (i/7)*0.82; };
+  const gg = (key) => { const m = muscles[key]; const i = m ? m.idx : 0; return i >= 4 ? `drop-shadow(0 0 ${3+i*2}px ${gc(key)}cc)` : 'none'; };
 
-  const gc = (key) => { const m = muscles[key]; return m ? GRADE_COLORS[m.idx] : '#1a2420'; };
-  const ga = (key) => { const m = muscles[key]; const idx = m ? m.idx : 0; return 0.18 + (idx/7)*0.78; };
-  const gs = (key) => { const m = muscles[key]; const idx = m ? m.idx : 0; return idx >= 4 ? `0 0 ${4+idx*3}px ${gc(key)}88` : 'none'; };
-
-  // FRONT SVG — detailed anatomical paths
-  const svgFront = `<svg viewBox="0 0 160 370" width="145" height="335" xmlns="http://www.w3.org/2000/svg">
+  // ── FRONT VIEW ──────────────────────────────────────────────────
+  // Precise anatomical muscle paths. No overlaps — each muscle occupies
+  // only its actual surface area. Neutral grey base under muscles.
+  const front = `<svg viewBox="0 0 120 310" width="120" height="310" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="skinF" cx="50%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="#1e2e2a"/><stop offset="100%" stop-color="#0f1815"/>
-    </radialGradient>
-    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="bgF" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1d2b27"/>
+      <stop offset="100%" stop-color="#111a17"/>
+    </linearGradient>
   </defs>
-  <!-- HEAD -->
-  <ellipse cx="80" cy="22" rx="17" ry="21" fill="#1a2822" stroke="#2a3d38" stroke-width="1"/>
-  <ellipse cx="80" cy="32" rx="11" ry="13" fill="#1a2822" stroke="#2a3d38" stroke-width="0.5" opacity="0.6"/>
-  <!-- NECK -->
-  <path d="M72,40 Q80,43 88,40 L89,52 Q80,55 71,52 Z" fill="#1a2822" stroke="#2a3d38" stroke-width="0.8"/>
-  <!-- TRAPEZIUS (upper) -->
-  <path d="M71,52 Q62,54 52,62 Q55,70 68,68 Q80,66 92,68 Q105,70 108,62 Q98,54 89,52 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" style="filter:drop-shadow(${gs('deltoides')})"/>
-  <!-- CLAVICLES line -->
-  <path d="M56,62 Q80,58 104,62" fill="none" stroke="#2a3d38" stroke-width="0.7" opacity="0.8"/>
-  <!-- PECTORALIS MAJOR left -->
-  <path d="M52,63 Q47,72 46,86 Q52,92 62,90 Q72,88 74,80 Q74,70 70,63 Q62,60 52,63 Z" fill="${gc('pectoraux')}" opacity="${ga('pectoraux')}" style="filter:drop-shadow(${gs('pectoraux')})"/>
-  <!-- PECTORALIS MAJOR right -->
-  <path d="M108,63 Q113,72 114,86 Q108,92 98,90 Q88,88 86,80 Q86,70 90,63 Q98,60 108,63 Z" fill="${gc('pectoraux')}" opacity="${ga('pectoraux')}" style="filter:drop-shadow(${gs('pectoraux')})"/>
-  <!-- Sternal line -->
-  <path d="M80,58 L80,95" fill="none" stroke="#1a2822" stroke-width="1.2" opacity="0.9"/>
-  <!-- DELTOID anterior left -->
-  <path d="M46,63 Q38,68 36,80 Q40,86 48,84 Q54,80 52,68 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" style="filter:drop-shadow(${gs('deltoides')})"/>
-  <!-- DELTOID anterior right -->
-  <path d="M114,63 Q122,68 124,80 Q120,86 112,84 Q106,80 108,68 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" style="filter:drop-shadow(${gs('deltoides')})"/>
-  <!-- BICEPS left -->
-  <path d="M36,82 Q30,92 30,110 Q34,116 42,114 Q48,110 48,96 Q48,84 42,80 Z" fill="#1e2d28" stroke="#2a3d38" stroke-width="0.8" opacity="0.9"/>
-  <!-- bicep belly detail -->
-  <path d="M32,90 Q34,102 36,110 Q40,112 44,110 Q44,98 42,88 Z" fill="#253530" opacity="0.7"/>
-  <!-- BICEPS right -->
-  <path d="M124,82 Q130,92 130,110 Q126,116 118,114 Q112,110 112,96 Q112,84 118,80 Z" fill="#1e2d28" stroke="#2a3d38" stroke-width="0.8" opacity="0.9"/>
-  <path d="M128,90 Q126,102 124,110 Q120,112 116,110 Q116,98 118,88 Z" fill="#253530" opacity="0.7"/>
-  <!-- SERRATUS + RIBS visible area -->
-  <path d="M46,90 Q42,100 44,118 Q50,122 56,118 Q58,104 56,90 Z" fill="#1c2a25" stroke="#263530" stroke-width="0.6" opacity="0.6"/>
-  <path d="M114,90 Q118,100 116,118 Q110,122 104,118 Q102,104 104,90 Z" fill="#1c2a25" stroke="#263530" stroke-width="0.6" opacity="0.6"/>
-  <!-- RECTUS ABDOMINIS (6-pack) -->
-  <path d="M68,93 Q65,93 64,102 Q65,111 68,111 Q72,111 73,102 Q72,93 68,93 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')}" style="filter:drop-shadow(${gs('abdominaux')})"/>
-  <path d="M92,93 Q89,93 87,102 Q88,111 92,111 Q95,111 96,102 Q95,93 92,93 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')}" style="filter:drop-shadow(${gs('abdominaux')})"/>
-  <path d="M68,113 Q65,113 64,122 Q65,130 68,130 Q72,130 73,122 Q72,113 68,113 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')}" style="filter:drop-shadow(${gs('abdominaux')})"/>
-  <path d="M92,113 Q89,113 87,122 Q88,130 92,130 Q95,130 96,122 Q95,113 92,113 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')}" style="filter:drop-shadow(${gs('abdominaux')})"/>
-  <path d="M68,132 Q65,132 64,140 Q66,148 70,148 Q74,148 74,140 Q73,132 68,132 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')*0.85}" style="filter:drop-shadow(${gs('abdominaux')})"/>
-  <path d="M92,132 Q89,132 87,140 Q89,148 92,148 Q96,148 96,140 Q95,132 92,132 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')*0.85}" style="filter:drop-shadow(${gs('abdominaux')})"/>
+
+  <!-- ═══ SKELETON SILHOUETTE (base grey) ═══ -->
+  <!-- Head -->
+  <ellipse cx="60" cy="18" rx="13" ry="16" fill="#1d2b27" stroke="#2e4038" stroke-width="0.8"/>
+  <!-- Neck -->
+  <rect x="55" y="31" width="10" height="9" rx="2" fill="#1d2b27" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Torso silhouette -->
+  <path d="M33,40 Q28,54 27,80 L27,120 Q32,128 60,129 Q88,128 93,120 L93,80 Q92,54 87,40 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- L arm silhouette -->
+  <path d="M27,44 Q22,52 20,68 L18,100 Q18,108 24,112 L30,108 Q32,100 33,84 L35,64 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- R arm silhouette -->
+  <path d="M93,44 Q98,52 100,68 L102,100 Q102,108 96,112 L90,108 Q88,100 87,84 L85,64 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Forearm L -->
+  <path d="M18,108 Q14,122 14,142 Q17,147 23,146 L28,142 Q30,128 30,112 Z" fill="#131d1a" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Forearm R -->
+  <path d="M102,108 Q106,122 106,142 Q103,147 97,146 L92,142 Q90,128 90,112 Z" fill="#131d1a" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Hand L -->
+  <path d="M12,143 Q10,152 11,158 Q16,162 24,160 L28,154 Q26,145 23,142 Z" fill="#121c19" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Hand R -->
+  <path d="M108,143 Q110,152 109,158 Q104,162 96,160 L92,154 Q94,145 97,142 Z" fill="#121c19" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Pelvis -->
+  <path d="M33,122 Q30,132 32,142 Q40,150 60,151 Q80,150 88,142 Q90,132 87,122 Q76,126 60,127 Q44,126 33,122 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Thigh L silhouette -->
+  <path d="M32,142 Q26,158 26,186 Q26,200 34,210 L46,210 Q52,200 52,186 Q52,158 50,142 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Thigh R silhouette -->
+  <path d="M88,142 Q94,158 94,186 Q94,200 86,210 L74,210 Q68,200 68,186 Q68,158 70,142 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Knee L -->
+  <path d="M28,210 Q26,218 28,224 Q34,228 44,228 Q52,226 54,220 L52,212 Q44,214 34,213 Z" fill="#111918" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Knee R -->
+  <path d="M92,210 Q94,218 92,224 Q86,228 76,228 Q68,226 66,220 L68,212 Q76,214 86,213 Z" fill="#111918" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Shin/tibia L -->
+  <path d="M28,224 Q24,244 25,270 Q30,275 38,274 L46,270 Q46,244 46,224 Z" fill="#131d1a" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Shin/tibia R -->
+  <path d="M92,224 Q96,244 95,270 Q90,275 82,274 L74,270 Q74,244 74,224 Z" fill="#131d1a" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Foot L -->
+  <path d="M24,270 Q20,276 21,282 Q28,286 42,284 Q48,280 46,272 Z" fill="#111918" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Foot R -->
+  <path d="M96,270 Q100,276 99,282 Q92,286 78,284 Q72,280 74,272 Z" fill="#111918" stroke="#2e4038" stroke-width="0.6"/>
+
+  <!-- ═══ MUSCLES FRONT ═══ -->
+
+  <!-- TRAPEZIUS upper — between neck and deltoid, trapezoid shape -->
+  <path d="M55,36 Q47,38 38,44 Q40,54 50,56 Q60,52 60,48 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" filter="${gg('deltoides')}"/>
+  <path d="M65,36 Q73,38 82,44 Q80,54 70,56 Q60,52 60,48 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" filter="${gg('deltoides')}"/>
+
+  <!-- PECTORALIS MAJOR — fan shape from sternum to humerus, stop before deltoid -->
+  <!-- Left pec: medial edge = sternum (x=58), lateral = deltoid boundary (x=38) -->
+  <path d="M58,44 Q58,52 56,64 Q52,72 46,76 Q40,72 36,66 Q36,56 40,50 Q48,44 58,44 Z" fill="${gc('pectoraux')}" opacity="${ga('pectoraux')}" filter="${gg('pectoraux')}"/>
+  <!-- Right pec -->
+  <path d="M62,44 Q62,52 64,64 Q68,72 74,76 Q80,72 84,66 Q84,56 80,50 Q72,44 62,44 Z" fill="${gc('pectoraux')}" opacity="${ga('pectoraux')}" filter="${gg('pectoraux')}"/>
+  <!-- Sternal separation line -->
+  <path d="M60,44 L60,78" stroke="#0e1715" stroke-width="1" fill="none"/>
+  <!-- Pec lower fold -->
+  <path d="M46,76 Q52,80 60,80 Q68,80 74,76" stroke="#0e1715" stroke-width="0.7" fill="none" opacity="0.8"/>
+
+  <!-- ANTERIOR DELTOID — caps the shoulder, between trap and pec/bicep -->
+  <path d="M35,50 Q30,56 28,68 Q30,76 36,78 Q42,76 44,68 Q44,58 40,50 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" filter="${gg('deltoides')}"/>
+  <path d="M85,50 Q90,56 92,68 Q90,76 84,78 Q78,76 76,68 Q76,58 80,50 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" filter="${gg('deltoides')}"/>
+
+  <!-- BICEPS BRACHII — anterior arm, between deltoid and forearm -->
+  <!-- Short head (inner) + long head (outer) blend -->
+  <path d="M28,76 Q24,86 22,102 Q24,110 30,112 Q36,110 38,102 Q38,86 36,76 Q34,74 30,74 Z" fill="#1a2825" stroke="#2e4038" stroke-width="0.5" opacity="0.8"/>
+  <!-- Bicep belly highlight -->
+  <path d="M26,84 Q24,96 26,106 Q30,108 32,104 Q32,94 30,84 Z" fill="#222e2a" opacity="0.7"/>
+  <path d="M92,76 Q96,86 98,102 Q96,110 90,112 Q84,110 82,102 Q82,86 84,76 Q86,74 90,74 Z" fill="#1a2825" stroke="#2e4038" stroke-width="0.5" opacity="0.8"/>
+  <path d="M94,84 Q96,96 94,106 Q90,108 88,104 Q88,94 90,84 Z" fill="#222e2a" opacity="0.7"/>
+
+  <!-- SERRATUS ANTERIOR — lateral ribs, between pec and oblique, finger-like slips -->
+  <path d="M34,74 Q30,80 30,86" stroke="${gc('core')}" stroke-width="2.5" fill="none" opacity="${ga('core')*0.7}" stroke-linecap="round"/>
+  <path d="M33,82 Q29,88 30,94" stroke="${gc('core')}" stroke-width="2.5" fill="none" opacity="${ga('core')*0.6}" stroke-linecap="round"/>
+  <path d="M86,74 Q90,80 90,86" stroke="${gc('core')}" stroke-width="2.5" fill="none" opacity="${ga('core')*0.7}" stroke-linecap="round"/>
+  <path d="M87,82 Q91,88 90,94" stroke="${gc('core')}" stroke-width="2.5" fill="none" opacity="${ga('core')*0.6}" stroke-linecap="round"/>
+
+  <!-- RECTUS ABDOMINIS — 3 pairs of bellies with tendinous intersections -->
+  <!-- Pair 1 (upper) -->
+  <path d="M55,80 Q52,80 51,88 Q52,94 55,94 Q58,94 59,88 Q58,80 55,80 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')}" filter="${gg('abdominaux')}"/>
+  <path d="M65,80 Q62,80 61,88 Q62,94 65,94 Q68,94 69,88 Q68,80 65,80 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')}" filter="${gg('abdominaux')}"/>
+  <!-- Pair 2 (mid) -->
+  <path d="M55,96 Q52,96 51,104 Q52,110 55,110 Q58,110 59,104 Q58,96 55,96 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')}" filter="${gg('abdominaux')}"/>
+  <path d="M65,96 Q62,96 61,104 Q62,110 65,110 Q68,110 69,104 Q68,96 65,96 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')}" filter="${gg('abdominaux')}"/>
+  <!-- Pair 3 (lower) -->
+  <path d="M55,112 Q52,112 51,118 Q52,124 55,124 Q58,124 59,118 Q58,112 55,112 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')*0.9}" filter="${gg('abdominaux')}"/>
+  <path d="M65,112 Q62,112 61,118 Q62,124 65,124 Q68,124 69,118 Q68,112 65,112 Z" fill="${gc('abdominaux')}" opacity="${ga('abdominaux')*0.9}" filter="${gg('abdominaux')}"/>
   <!-- Linea alba -->
-  <path d="M80,93 L80,148" fill="none" stroke="#111a17" stroke-width="1.4"/>
-  <!-- EXTERNAL OBLIQUES -->
-  <path d="M56,93 Q50,105 48,128 Q54,138 62,136 Q68,128 66,112 Q64,98 56,93 Z" fill="${gc('obliques')}" opacity="${ga('obliques')}" style="filter:drop-shadow(${gs('obliques')})"/>
-  <path d="M104,93 Q110,105 112,128 Q106,138 98,136 Q92,128 94,112 Q96,98 104,93 Z" fill="${gc('obliques')}" opacity="${ga('obliques')}" style="filter:drop-shadow(${gs('obliques')})"/>
-  <!-- FOREARMS left -->
-  <path d="M30,116 Q24,132 24,155 Q28,159 36,157 Q40,140 40,118 Z" fill="#182420" stroke="#2a3530" stroke-width="0.7"/>
-  <!-- FOREARMS right -->
-  <path d="M130,116 Q136,132 136,155 Q132,159 124,157 Q120,140 120,118 Z" fill="#182420" stroke="#2a3530" stroke-width="0.7"/>
-  <!-- Hands -->
-  <ellipse cx="30" cy="162" rx="8" ry="9" fill="#182420" stroke="#2a3530" stroke-width="0.7"/>
-  <ellipse cx="130" cy="162" rx="8" ry="9" fill="#182420" stroke="#2a3530" stroke-width="0.7"/>
-  <!-- Finger lines -->
-  <path d="M24,165 Q22,175 23,178 M28,167 Q26,178 27,181 M32,167 Q31,178 32,181 M36,166 Q35,176 36,179" fill="none" stroke="#2a3530" stroke-width="0.6"/>
-  <path d="M136,165 Q138,175 137,178 M132,167 Q134,178 133,181 M128,167 Q129,178 128,181 M124,166 Q125,176 124,179" fill="none" stroke="#2a3530" stroke-width="0.6"/>
-  <!-- PELVIS/HIP area -->
-  <path d="M56,150 Q46,156 44,168 Q50,178 65,180 Q80,182 95,180 Q110,178 116,168 Q114,156 104,150 Q96,148 80,148 Q64,148 56,150 Z" fill="url(#skinF)" stroke="#2a3d38" stroke-width="0.8"/>
-  <!-- HIP flexors / tensor -->
-  <path d="M46,162 Q42,172 44,186 Q52,190 58,184 Q62,172 58,160 Z" fill="#1c2d28" opacity="0.6"/>
-  <path d="M114,162 Q118,172 116,186 Q108,190 102,184 Q98,172 102,160 Z" fill="#1c2d28" opacity="0.6"/>
-  <!-- QUADRICEPS (4 heads visible) - left -->
-  <path d="M46,180 Q38,196 38,222 Q42,236 54,238 Q64,236 66,222 Q68,204 64,184 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')}" style="filter:drop-shadow(${gs('quadriceps')})"/>
-  <!-- vastus medialis bulge left -->
-  <path d="M54,222 Q50,232 52,240 Q58,244 64,240 Q66,232 62,222 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')*1.1}" style="filter:drop-shadow(${gs('quadriceps')})"/>
-  <!-- QUADRICEPS right -->
-  <path d="M114,180 Q122,196 122,222 Q118,236 106,238 Q96,236 94,222 Q92,204 96,184 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')}" style="filter:drop-shadow(${gs('quadriceps')})"/>
-  <path d="M106,222 Q110,232 108,240 Q102,244 96,240 Q94,232 98,222 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')*1.1}" style="filter:drop-shadow(${gs('quadriceps')})"/>
-  <!-- ADDUCTORS inner thigh left -->
-  <path d="M64,185 Q68,198 70,222 Q68,234 62,238 Q58,230 58,218 Q58,200 60,185 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')*0.6}"/>
-  <path d="M96,185 Q92,198 90,222 Q92,234 98,238 Q102,230 102,218 Q102,200 100,185 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')*0.6}"/>
-  <!-- Quad separation lines -->
-  <path d="M54,188 Q56,210 56,228" fill="none" stroke="#111a17" stroke-width="0.8" opacity="0.7"/>
-  <path d="M106,188 Q104,210 104,228" fill="none" stroke="#111a17" stroke-width="0.8" opacity="0.7"/>
-  <!-- PATELLA / knee -->
-  <ellipse cx="55" cy="244" rx="12" ry="9" fill="#16211e" stroke="#2a3530" stroke-width="1"/>
-  <ellipse cx="105" cy="244" rx="12" ry="9" fill="#16211e" stroke="#2a3530" stroke-width="1"/>
-  <!-- TIBIALIS ANTERIOR left -->
-  <path d="M44,252 Q40,270 42,298 Q48,304 56,302 Q60,278 60,252 Z" fill="#1a2822" stroke="#2a3530" stroke-width="0.7" opacity="0.9"/>
-  <path d="M48,258 Q46,275 48,294 Q52,298 56,295 Q56,275 54,258 Z" fill="#222e28" opacity="0.8"/>
-  <!-- TIBIALIS ANTERIOR right -->
-  <path d="M116,252 Q120,270 118,298 Q112,304 104,302 Q100,278 100,252 Z" fill="#1a2822" stroke="#2a3530" stroke-width="0.7" opacity="0.9"/>
-  <path d="M112,258 Q114,275 112,294 Q108,298 104,295 Q104,275 106,258 Z" fill="#222e28" opacity="0.8"/>
-  <!-- Feet front -->
-  <path d="M40,304 Q34,312 36,322 Q44,326 56,322 Q62,316 60,306 Z" fill="#162018" stroke="#2a3530" stroke-width="0.7"/>
-  <path d="M120,304 Q126,312 124,322 Q116,326 104,322 Q98,316 100,306 Z" fill="#162018" stroke="#2a3530" stroke-width="0.7"/>
-  <!-- Toe lines -->
-  <path d="M36,318 L34,326 M40,320 L38,328 M46,322 L45,330 M52,321 L52,329 M57,319 L57,327" fill="none" stroke="#2a3530" stroke-width="0.6"/>
-  <path d="M124,318 L126,326 M120,320 L122,328 M114,322 L115,330 M108,321 L108,329 M103,319 L103,327" fill="none" stroke="#2a3530" stroke-width="0.6"/>
-  <!-- Label -->
-  <text x="80" y="345" text-anchor="middle" fill="#3a5048" font-size="9" font-family="'JetBrains Mono',monospace" letter-spacing="1">AVANT</text>
+  <path d="M60,78 L60,126" stroke="#0a1210" stroke-width="1.2" fill="none"/>
+  <!-- Tendinous intersections (horizontal lines across abs) -->
+  <path d="M51,80 L59,80 M61,80 L69,80" stroke="#0a1210" stroke-width="0.7" fill="none"/>
+  <path d="M51,96 L59,96 M61,96 L69,96" stroke="#0a1210" stroke-width="0.7" fill="none"/>
+  <path d="M51,112 L59,112 M61,112 L69,112" stroke="#0a1210" stroke-width="0.7" fill="none"/>
+
+  <!-- EXTERNAL OBLIQUE — diagonal fibers from ribs to iliac crest, outside the abs -->
+  <path d="M35,80 Q32,92 32,108 Q34,118 40,122 Q46,124 50,120 Q50,110 48,96 Q44,84 38,78 Z" fill="${gc('obliques')}" opacity="${ga('obliques')}" filter="${gg('obliques')}"/>
+  <path d="M85,80 Q88,92 88,108 Q86,118 80,122 Q74,124 70,120 Q70,110 72,96 Q76,84 82,78 Z" fill="${gc('obliques')}" opacity="${ga('obliques')}" filter="${gg('obliques')}"/>
+  <!-- Oblique fiber direction lines -->
+  <path d="M38,84 Q40,96 42,108 M36,92 Q38,102 40,114" stroke="#0a1210" stroke-width="0.6" fill="none" opacity="0.6"/>
+  <path d="M82,84 Q80,96 78,108 M84,92 Q82,102 80,114" stroke="#0a1210" stroke-width="0.6" fill="none" opacity="0.6"/>
+
+  <!-- QUADRICEPS — 4 distinct heads, no overlap with knee cap -->
+  <!-- Rectus femoris (center, most visible) L -->
+  <path d="M46,144 Q42,158 42,182 Q42,196 44,206 Q48,208 52,206 Q54,196 54,182 Q54,158 52,144 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')}" filter="${gg('quadriceps')}"/>
+  <!-- Vastus lateralis (outer) L -->
+  <path d="M36,148 Q32,162 32,186 Q32,200 36,208 Q42,210 44,206 Q42,192 42,174 Q42,158 40,148 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')*0.9}" filter="${gg('quadriceps')}"/>
+  <!-- Vastus medialis (inner, teardrop near knee) L -->
+  <path d="M52,180 Q50,192 50,204 Q52,210 56,210 Q60,208 60,202 Q60,192 58,182 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')*1.05}" filter="${gg('quadriceps')}"/>
+  <!-- Vastus intermedius (deep, barely visible as edge) -->
+  <!-- Separation lines between heads L -->
+  <path d="M42,152 Q42,172 42,196" stroke="#0a1210" stroke-width="0.7" fill="none" opacity="0.6"/>
+  <path d="M54,150 Q54,170 52,190" stroke="#0a1210" stroke-width="0.7" fill="none" opacity="0.5"/>
+
+  <!-- Rectus femoris R -->
+  <path d="M74,144 Q72,158 72,182 Q72,196 70,206 Q74,208 78,208 Q80,198 80,182 Q80,158 78,144 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')}" filter="${gg('quadriceps')}"/>
+  <!-- Vastus lateralis R -->
+  <path d="M84,148 Q88,162 88,186 Q88,200 84,208 Q78,210 76,206 Q78,192 78,174 Q78,158 80,148 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')*0.9}" filter="${gg('quadriceps')}"/>
+  <!-- Vastus medialis R -->
+  <path d="M68,180 Q68,192 70,204 Q68,210 64,210 Q60,208 60,202 Q60,192 62,182 Z" fill="${gc('quadriceps')}" opacity="${ga('quadriceps')*1.05}" filter="${gg('quadriceps')}"/>
+  <path d="M78,152 Q78,172 78,196" stroke="#0a1210" stroke-width="0.7" fill="none" opacity="0.6"/>
+  <path d="M66,150 Q68,170 68,190" stroke="#0a1210" stroke-width="0.7" fill="none" opacity="0.5"/>
+
+  <!-- TIBIALIS ANTERIOR — runs lateral to shin bone -->
+  <path d="M30,228 Q28,246 28,264 Q32,270 38,268 Q40,250 40,230 Z" fill="#1c2a25" stroke="#2e4038" stroke-width="0.5" opacity="0.85"/>
+  <!-- tibialis muscle belly -->
+  <path d="M31,234 Q30,248 31,262 Q34,266 37,264 Q38,250 38,236 Z" fill="#24332e" opacity="0.7"/>
+  <path d="M90,228 Q92,246 92,264 Q88,270 82,268 Q80,250 80,230 Z" fill="#1c2a25" stroke="#2e4038" stroke-width="0.5" opacity="0.85"/>
+  <path d="M89,234 Q90,248 89,262 Q86,266 83,264 Q82,250 82,236 Z" fill="#24332e" opacity="0.7"/>
+
+  <!-- LABEL -->
+  <text x="60" y="300" text-anchor="middle" fill="#2e4038" font-size="7.5" font-family="'JetBrains Mono',monospace" letter-spacing="1.5">AVANT</text>
 </svg>`;
 
-  const svgBack = `<svg viewBox="0 0 160 370" width="145" height="335" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <radialGradient id="skinB" cx="50%" cy="30%" r="70%">
-      <stop offset="0%" stop-color="#1e2e2a"/><stop offset="100%" stop-color="#0f1815"/>
-    </radialGradient>
-  </defs>
-  <!-- HEAD back -->
-  <ellipse cx="80" cy="22" rx="17" ry="21" fill="#1a2822" stroke="#2a3d38" stroke-width="1"/>
-  <!-- Skull shape -->
-  <path d="M66,14 Q80,8 94,14 Q96,24 80,28 Q64,24 66,14 Z" fill="#1c2d28" opacity="0.5"/>
-  <!-- NECK back -->
-  <path d="M72,40 Q80,44 88,40 L89,52 Q80,55 71,52 Z" fill="#1a2822" stroke="#2a3d38" stroke-width="0.8"/>
-  <!-- TRAPEZIUS (full) -->
-  <path d="M71,46 Q62,50 50,60 Q46,70 52,76 Q60,80 68,76 Q80,72 92,76 Q100,80 108,76 Q114,70 110,60 Q98,50 89,46 Q80,44 71,46 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" style="filter:drop-shadow(${gs('deltoides')})"/>
-  <!-- Trapezius spine detail -->
-  <path d="M78,52 L78,76 M82,52 L82,76" fill="none" stroke="#0f1815" stroke-width="0.6" opacity="0.6"/>
-  <!-- DELTOID posterior left -->
-  <path d="M46,62 Q38,68 36,82 Q40,90 48,88 Q54,82 52,70 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" style="filter:drop-shadow(${gs('deltoides')})"/>
-  <!-- DELTOID posterior right -->
-  <path d="M114,62 Q122,68 124,82 Q120,90 112,88 Q106,82 108,70 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" style="filter:drop-shadow(${gs('deltoides')})"/>
-  <!-- INFRASPINATUS / teres -->
-  <path d="M52,74 Q48,82 50,94 Q58,100 68,96 Q74,88 72,78 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')*0.85}"/>
-  <path d="M108,74 Q112,82 110,94 Q102,100 92,96 Q86,88 88,78 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')*0.85}"/>
-  <!-- LATISSIMUS DORSI left -->
-  <path d="M48,88 Q42,105 44,130 Q52,142 64,138 Q72,128 72,112 Q72,96 68,84 Z" fill="${gc('lombaires')}" opacity="${ga('lombaires')}" style="filter:drop-shadow(${gs('lombaires')})"/>
-  <!-- LATISSIMUS DORSI right -->
-  <path d="M112,88 Q118,105 116,130 Q108,142 96,138 Q88,128 88,112 Q88,96 92,84 Z" fill="${gc('lombaires')}" opacity="${ga('lombaires')}" style="filter:drop-shadow(${gs('lombaires')})"/>
-  <!-- Lat surface lines -->
-  <path d="M52,95 Q54,112 56,128" fill="none" stroke="#0f1815" stroke-width="0.8" opacity="0.5"/>
-  <path d="M108,95 Q106,112 104,128" fill="none" stroke="#0f1815" stroke-width="0.8" opacity="0.5"/>
-  <!-- ERECTOR SPINAE / spine -->
-  <path d="M76,76 Q73,100 74,138 Q77,146 80,148 Q83,146 86,138 Q87,100 84,76 Z" fill="${gc('lombaires')}" opacity="${ga('lombaires')*0.9}" style="filter:drop-shadow(${gs('lombaires')})"/>
-  <!-- Spine detail line -->
-  <path d="M80,76 L80,148" fill="none" stroke="#0a120f" stroke-width="1.4"/>
-  <!-- Vertebrae bumps -->
-  <circle cx="80" cy="82" r="1.5" fill="#2a3d38" opacity="0.7"/>
-  <circle cx="80" cy="90" r="1.5" fill="#2a3d38" opacity="0.7"/>
-  <circle cx="80" cy="98" r="1.5" fill="#2a3d38" opacity="0.7"/>
-  <circle cx="80" cy="106" r="1.5" fill="#2a3d38" opacity="0.7"/>
-  <circle cx="80" cy="114" r="1.5" fill="#2a3d38" opacity="0.7"/>
-  <circle cx="80" cy="122" r="1.5" fill="#2a3d38" opacity="0.7"/>
-  <circle cx="80" cy="130" r="1.5" fill="#2a3d38" opacity="0.7"/>
-  <circle cx="80" cy="138" r="1.5" fill="#2a3d38" opacity="0.7"/>
-  <!-- TRICEPS long head left -->
-  <path d="M36,84 Q28,96 28,118 Q34,124 42,122 Q48,116 48,100 Q48,86 42,82 Z" fill="${gc('triceps')}" opacity="${ga('triceps')}" style="filter:drop-shadow(${gs('triceps')})"/>
-  <!-- triceps lateral head -->
-  <path d="M30,88 Q26,100 28,116 Q34,118 38,114 Q38,100 36,88 Z" fill="${gc('triceps')}" opacity="${ga('triceps')*0.8}"/>
-  <!-- TRICEPS right -->
-  <path d="M124,84 Q132,96 132,118 Q126,124 118,122 Q112,116 112,100 Q112,86 118,82 Z" fill="${gc('triceps')}" opacity="${ga('triceps')}" style="filter:drop-shadow(${gs('triceps')})"/>
-  <path d="M130,88 Q134,100 132,116 Q126,118 122,114 Q122,100 124,88 Z" fill="${gc('triceps')}" opacity="${ga('triceps')*0.8}"/>
-  <!-- FOREARMS back left -->
-  <path d="M28,124 Q22,140 22,162 Q28,167 36,165 Q40,148 40,126 Z" fill="#182420" stroke="#2a3530" stroke-width="0.7"/>
-  <!-- FOREARMS back right -->
-  <path d="M132,124 Q138,140 138,162 Q132,167 124,165 Q120,148 120,126 Z" fill="#182420" stroke="#2a3530" stroke-width="0.7"/>
+  // ── BACK VIEW ──────────────────────────────────────────────────
+  const back = `<svg viewBox="0 0 120 310" width="120" height="310" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ═══ BASE SILHOUETTE BACK ═══ -->
+  <ellipse cx="60" cy="18" rx="13" ry="16" fill="#1d2b27" stroke="#2e4038" stroke-width="0.8"/>
+  <rect x="55" y="31" width="10" height="9" rx="2" fill="#1d2b27" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Torso back -->
+  <path d="M33,40 Q28,54 27,80 L27,120 Q32,128 60,129 Q88,128 93,120 L93,80 Q92,54 87,40 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Arms back L -->
+  <path d="M27,44 Q22,52 20,68 L18,100 Q18,108 24,112 L30,108 Q32,100 33,84 L35,64 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Arms back R -->
+  <path d="M93,44 Q98,52 100,68 L102,100 Q102,108 96,112 L90,108 Q88,100 87,84 L85,64 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Forearms back -->
+  <path d="M18,108 Q14,122 14,142 Q17,147 23,146 L28,142 Q30,128 30,112 Z" fill="#131d1a" stroke="#2e4038" stroke-width="0.6"/>
+  <path d="M102,108 Q106,122 106,142 Q103,147 97,146 L92,142 Q90,128 90,112 Z" fill="#131d1a" stroke="#2e4038" stroke-width="0.6"/>
   <!-- Hands back -->
-  <ellipse cx="30" cy="170" rx="8" ry="9" fill="#182420" stroke="#2a3530" stroke-width="0.7"/>
-  <ellipse cx="130" cy="170" rx="8" ry="9" fill="#182420" stroke="#2a3530" stroke-width="0.7"/>
-  <path d="M24,173 Q22,183 23,186 M28,175 Q26,186 27,189 M32,175 Q31,186 32,189 M36,174 Q35,184 36,187" fill="none" stroke="#2a3530" stroke-width="0.6"/>
-  <path d="M136,173 Q138,183 137,186 M132,175 Q134,186 133,189 M128,175 Q129,186 128,189 M124,174 Q125,184 124,187" fill="none" stroke="#2a3530" stroke-width="0.6"/>
-  <!-- LUMBAR / low back -->
-  <path d="M58,140 Q52,150 54,162 Q62,170 80,170 Q98,170 106,162 Q108,150 102,140 Q94,144 80,146 Q66,144 58,140 Z" fill="${gc('lombaires')}" opacity="${ga('lombaires')}" style="filter:drop-shadow(${gs('lombaires')})"/>
-  <!-- GLUTEUS MAXIMUS left -->
-  <path d="M46,168 Q36,182 38,206 Q48,216 62,212 Q72,204 72,188 Q72,172 62,164 Z" fill="${gc('fessiers')}" opacity="${ga('fessiers')}" style="filter:drop-shadow(${gs('fessiers')})"/>
-  <!-- GLUTEUS MAXIMUS right -->
-  <path d="M114,168 Q124,182 122,206 Q112,216 98,212 Q88,204 88,188 Q88,172 98,164 Z" fill="${gc('fessiers')}" opacity="${ga('fessiers')}" style="filter:drop-shadow(${gs('fessiers')})"/>
-  <!-- Glute crease -->
-  <path d="M46,206 Q62,212 80,212 Q98,212 114,206" fill="none" stroke="#0a120f" stroke-width="1.2" opacity="0.8"/>
-  <!-- HAMSTRINGS (biceps femoris + semitendinosus) left -->
-  <path d="M38,210 Q32,228 34,256 Q42,264 54,260 Q62,252 62,234 Q62,214 54,208 Z" fill="${gc('ischiojambiers')}" opacity="${ga('ischiojambiers')}" style="filter:drop-shadow(${gs('ischiojambiers')})"/>
-  <!-- semi separation -->
-  <path d="M54,212 Q56,234 54,252" fill="none" stroke="#0a120f" stroke-width="0.8" opacity="0.6"/>
-  <!-- HAMSTRINGS right -->
-  <path d="M122,210 Q128,228 126,256 Q118,264 106,260 Q98,252 98,234 Q98,214 106,208 Z" fill="${gc('ischiojambiers')}" opacity="${ga('ischiojambiers')}" style="filter:drop-shadow(${gs('ischiojambiers')})"/>
-  <path d="M106,212 Q104,234 106,252" fill="none" stroke="#0a120f" stroke-width="0.8" opacity="0.6"/>
-  <!-- Popliteal fossa (back of knee) -->
-  <path d="M34,258 Q36,264 44,268 Q54,270 60,264 Q62,258 56,254 Q48,258 34,258 Z" fill="#16211e" stroke="#2a3530" stroke-width="0.8"/>
-  <path d="M126,258 Q124,264 116,268 Q106,270 100,264 Q98,258 104,254 Q112,258 126,258 Z" fill="#16211e" stroke="#2a3530" stroke-width="0.8"/>
-  <!-- GASTROCNEMIUS (calves) left -->
-  <path d="M36,268 Q30,282 32,306 Q40,314 52,310 Q58,298 58,278 Q58,266 52,264 Z" fill="${gc('quadsCh')}" opacity="${ga('quadsCh')}" style="filter:drop-shadow(${gs('quadsCh')})"/>
-  <!-- calf medial/lateral separation -->
-  <path d="M44,272 Q44,290 46,306" fill="none" stroke="#0a120f" stroke-width="0.9" opacity="0.6"/>
-  <!-- GASTROCNEMIUS right -->
-  <path d="M124,268 Q130,282 128,306 Q120,314 108,310 Q102,298 102,278 Q102,266 108,264 Z" fill="${gc('quadsCh')}" opacity="${ga('quadsCh')}" style="filter:drop-shadow(${gs('quadsCh')})"/>
-  <path d="M116,272 Q116,290 114,306" fill="none" stroke="#0a120f" stroke-width="0.9" opacity="0.6"/>
-  <!-- Achilles tendon left -->
-  <path d="M40,308 Q44,318 44,328" fill="none" stroke="#2a3d38" stroke-width="2.5" stroke-linecap="round"/>
-  <!-- Achilles tendon right -->
-  <path d="M120,308 Q116,318 116,328" fill="none" stroke="#2a3d38" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M12,143 Q10,152 11,158 Q16,162 24,160 L28,154 Q26,145 23,142 Z" fill="#121c19" stroke="#2e4038" stroke-width="0.6"/>
+  <path d="M108,143 Q110,152 109,158 Q104,162 96,160 L92,154 Q94,145 97,142 Z" fill="#121c19" stroke="#2e4038" stroke-width="0.6"/>
+  <!-- Glutes/pelvis back -->
+  <path d="M33,122 Q28,134 30,150 Q40,160 60,161 Q80,160 90,150 Q92,134 87,122 Q76,126 60,127 Q44,126 33,122 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Thighs back -->
+  <path d="M30,156 Q24,172 24,198 Q26,212 36,218 L46,216 Q50,202 50,186 Q50,166 44,155 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <path d="M90,156 Q96,172 96,198 Q94,212 84,218 L74,216 Q70,202 70,186 Q70,166 76,155 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Knee back L -->
+  <path d="M26,216 Q24,226 26,232 Q34,236 44,234 Q50,230 50,222 L48,216 Q40,220 30,218 Z" fill="#111918" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Knee back R -->
+  <path d="M94,216 Q96,226 94,232 Q86,236 76,234 Q70,230 70,222 L72,216 Q80,220 90,218 Z" fill="#111918" stroke="#2e4038" stroke-width="0.7"/>
+  <!-- Calves back -->
+  <path d="M26,232 Q22,250 24,272 Q28,278 36,277 L44,273 Q44,250 44,232 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
+  <path d="M94,232 Q98,250 96,272 Q92,278 84,277 L76,273 Q76,250 76,232 Z" fill="#141e1b" stroke="#2e4038" stroke-width="0.7"/>
   <!-- Feet back -->
-  <path d="M34,326 Q30,334 32,340 Q40,344 54,340 Q60,334 58,326 Z" fill="#162018" stroke="#2a3530" stroke-width="0.7"/>
-  <path d="M126,326 Q130,334 128,340 Q120,344 106,340 Q100,334 102,326 Z" fill="#162018" stroke="#2a3530" stroke-width="0.7"/>
-  <!-- Label -->
-  <text x="80" y="358" text-anchor="middle" fill="#3a5048" font-size="9" font-family="'JetBrains Mono',monospace" letter-spacing="1">ARRIÈRE</text>
+  <path d="M22,274 Q18,280 20,286 Q28,290 42,288 Q47,284 44,274 Z" fill="#111918" stroke="#2e4038" stroke-width="0.6"/>
+  <path d="M98,274 Q102,280 100,286 Q92,290 78,288 Q73,284 76,274 Z" fill="#111918" stroke="#2e4038" stroke-width="0.6"/>
+
+  <!-- ═══ MUSCLES BACK ═══ -->
+
+  <!-- TRAPEZIUS — diamond spanning C7 to T12, shoulder to shoulder -->
+  <!-- Upper trap (shoulders to neck) -->
+  <path d="M55,35 Q46,37 37,44 Q38,54 46,58 Q54,60 60,57 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" filter="${gg('deltoides')}"/>
+  <path d="M65,35 Q74,37 83,44 Q82,54 74,58 Q66,60 60,57 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" filter="${gg('deltoides')}"/>
+  <!-- Middle trap (horizontal fibers) -->
+  <path d="M36,56 Q38,66 42,72 Q52,68 60,66 Q68,68 78,72 Q82,66 84,56 Q72,58 60,58 Q48,58 36,56 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')*0.85}" filter="${gg('deltoides')}"/>
+  <!-- Lower trap (diagonal fibers down spine) -->
+  <path d="M42,72 Q46,84 50,98 Q56,100 60,100 Q64,100 70,98 Q74,84 78,72 Q68,74 60,74 Q52,74 42,72 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')*0.7}" filter="${gg('deltoides')}"/>
+  <!-- Spine line through trap -->
+  <path d="M60,38 L60,100" stroke="#0a1210" stroke-width="0.9" fill="none" opacity="0.7"/>
+  <!-- Vertebrae bumps -->
+  <circle cx="60" cy="42" r="1.2" fill="#2e4038" opacity="0.6"/>
+  <circle cx="60" cy="49" r="1.2" fill="#2e4038" opacity="0.6"/>
+  <circle cx="60" cy="56" r="1.2" fill="#2e4038" opacity="0.6"/>
+  <circle cx="60" cy="63" r="1.2" fill="#2e4038" opacity="0.6"/>
+  <circle cx="60" cy="70" r="1.2" fill="#2e4038" opacity="0.6"/>
+  <circle cx="60" cy="77" r="1.2" fill="#2e4038" opacity="0.6"/>
+  <circle cx="60" cy="84" r="1.2" fill="#2e4038" opacity="0.6"/>
+  <circle cx="60" cy="91" r="1.2" fill="#2e4038" opacity="0.6"/>
+  <circle cx="60" cy="98" r="1.2" fill="#2e4038" opacity="0.6"/>
+
+  <!-- POSTERIOR DELTOID — rear cap of shoulder -->
+  <path d="M33,44 Q28,50 27,62 Q28,70 34,74 Q40,72 44,64 Q44,54 40,46 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" filter="${gg('deltoides')}"/>
+  <path d="M87,44 Q92,50 93,62 Q92,70 86,74 Q80,72 76,64 Q76,54 80,46 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')}" filter="${gg('deltoides')}"/>
+
+  <!-- INFRASPINATUS — fills infraspinous fossa, below spine of scapula -->
+  <path d="M36,58 Q34,66 36,76 Q40,80 48,80 Q54,78 56,70 Q56,62 52,58 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')*0.75}"/>
+  <path d="M84,58 Q86,66 84,76 Q80,80 72,80 Q66,78 64,70 Q64,62 68,58 Z" fill="${gc('deltoides')}" opacity="${ga('deltoides')*0.75}"/>
+  <!-- Scapula spine line -->
+  <path d="M38,58 Q48,56 56,58" stroke="#0a1210" stroke-width="0.8" fill="none"/>
+  <path d="M82,58 Q72,56 64,58" stroke="#0a1210" stroke-width="0.8" fill="none"/>
+
+  <!-- TRICEPS BRACHII — 3 heads, posterior arm surface -->
+  <!-- Long head (medial) L -->
+  <path d="M27,70 Q24,80 22,96 Q22,106 26,110 Q30,110 34,106 Q36,96 36,82 Q34,72 30,68 Z" fill="${gc('triceps')}" opacity="${ga('triceps')}" filter="${gg('triceps')}"/>
+  <!-- Lateral head L (narrower, runs outer arm) -->
+  <path d="M22,74 Q20,84 20,98 Q20,106 24,110 Q28,106 28,96 Q28,84 24,74 Z" fill="${gc('triceps')}" opacity="${ga('triceps')*0.8}" filter="${gg('triceps')}"/>
+  <!-- Separation groove L -->
+  <path d="M26,76 Q26,90 26,104" stroke="#0a1210" stroke-width="0.7" fill="none" opacity="0.6"/>
+  <!-- Triceps R -->
+  <path d="M93,70 Q96,80 98,96 Q98,106 94,110 Q90,110 86,106 Q84,96 84,82 Q86,72 90,68 Z" fill="${gc('triceps')}" opacity="${ga('triceps')}" filter="${gg('triceps')}"/>
+  <path d="M98,74 Q100,84 100,98 Q100,106 96,110 Q92,106 92,96 Q92,84 96,74 Z" fill="${gc('triceps')}" opacity="${ga('triceps')*0.8}" filter="${gg('triceps')}"/>
+  <path d="M94,76 Q94,90 94,104" stroke="#0a1210" stroke-width="0.7" fill="none" opacity="0.6"/>
+
+  <!-- LATISSIMUS DORSI — wide fan from humerus to lower spine/iliac -->
+  <!-- L lat — distinct triangular shape, below and outside trap -->
+  <path d="M36,76 Q30,90 29,108 Q30,120 34,124 Q42,126 50,118 Q56,110 56,96 Q54,84 48,76 Z" fill="${gc('lombaires')}" opacity="${ga('lombaires')}" filter="${gg('lombaires')}"/>
+  <!-- Lat fiber lines L -->
+  <path d="M38,82 Q36,96 36,110 M42,80 Q40,94 40,110" stroke="#0a1210" stroke-width="0.6" fill="none" opacity="0.5"/>
+  <!-- R lat -->
+  <path d="M84,76 Q90,90 91,108 Q90,120 86,124 Q78,126 70,118 Q64,110 64,96 Q66,84 72,76 Z" fill="${gc('lombaires')}" opacity="${ga('lombaires')}" filter="${gg('lombaires')}"/>
+  <path d="M82,82 Q84,96 84,110 M78,80 Q80,94 80,110" stroke="#0a1210" stroke-width="0.6" fill="none" opacity="0.5"/>
+
+  <!-- ERECTOR SPINAE — two columns flanking spine, lumbar region -->
+  <path d="M55,100 Q53,110 53,122 Q55,128 58,128 Q60,128 60,124 L60,100 Z" fill="${gc('lombaires')}" opacity="${ga('lombaires')*0.9}" filter="${gg('lombaires')}"/>
+  <path d="M65,100 Q67,110 67,122 Q65,128 62,128 Q60,128 60,124 L60,100 Z" fill="${gc('lombaires')}" opacity="${ga('lombaires')*0.9}" filter="${gg('lombaires')}"/>
+
+  <!-- GLUTEUS MAXIMUS — large rounded shape, distinct from hamstring -->
+  <!-- L glute — stops at glute fold -->
+  <path d="M32,130 Q26,142 28,160 Q34,170 48,170 Q58,168 60,160 Q60,146 56,132 Q48,128 38,128 Z" fill="${gc('fessiers')}" opacity="${ga('fessiers')}" filter="${gg('fessiers')}"/>
+  <!-- R glute -->
+  <path d="M88,130 Q94,142 92,160 Q86,170 72,170 Q62,168 60,160 Q60,146 64,132 Q72,128 82,128 Z" fill="${gc('fessiers')}" opacity="${ga('fessiers')}" filter="${gg('fessiers')}"/>
+  <!-- Glute crease (infragluteal fold) -->
+  <path d="M30,168 Q44,172 60,172 Q76,172 90,168" stroke="#0a1210" stroke-width="1.1" fill="none" opacity="0.9"/>
+  <!-- Gluteal cleft -->
+  <path d="M60,130 L60,168" stroke="#0a1210" stroke-width="0.9" fill="none" opacity="0.6"/>
+
+  <!-- BICEPS FEMORIS (lateral hamstring) — runs outer back of thigh -->
+  <path d="M28,170 Q24,184 24,206 Q26,214 32,216 Q38,214 40,204 Q40,186 38,170 Z" fill="${gc('ischiojambiers')}" opacity="${ga('ischiojambiers')}" filter="${gg('ischiojambiers')}"/>
+  <!-- SEMITENDINOSUS (medial hamstring) — inner back of thigh -->
+  <path d="M42,170 Q40,184 40,206 Q42,214 48,216 Q54,214 56,204 Q56,186 54,172 Z" fill="${gc('ischiojambiers')}" opacity="${ga('ischiojambiers')*0.9}" filter="${gg('ischiojambiers')}"/>
+  <!-- Hamstring separation groove L -->
+  <path d="M40,174 Q40,192 40,210" stroke="#0a1210" stroke-width="0.9" fill="none" opacity="0.7"/>
+  <!-- R biceps femoris -->
+  <path d="M92,170 Q96,184 96,206 Q94,214 88,216 Q82,214 80,204 Q80,186 82,170 Z" fill="${gc('ischiojambiers')}" opacity="${ga('ischiojambiers')}" filter="${gg('ischiojambiers')}"/>
+  <!-- R semitendinosus -->
+  <path d="M78,170 Q80,184 80,206 Q78,214 72,216 Q66,214 64,204 Q64,186 66,172 Z" fill="${gc('ischiojambiers')}" opacity="${ga('ischiojambiers')*0.9}" filter="${gg('ischiojambiers')}"/>
+  <path d="M80,174 Q80,192 80,210" stroke="#0a1210" stroke-width="0.9" fill="none" opacity="0.7"/>
+
+  <!-- GASTROCNEMIUS — two distinct heads (medial larger, lateral smaller) -->
+  <!-- Medial head L (inner, larger) -->
+  <path d="M30,234 Q28,246 28,262 Q30,270 36,270 Q40,268 42,258 Q42,242 40,232 Z" fill="${gc('quadsCh')}" opacity="${ga('quadsCh')}" filter="${gg('quadsCh')}"/>
+  <!-- Lateral head L (outer) -->
+  <path d="M28,234 Q24,246 24,262 Q26,270 30,269 Q33,265 34,254 Q34,240 30,232 Z" fill="${gc('quadsCh')}" opacity="${ga('quadsCh')*0.85}" filter="${gg('quadsCh')}"/>
+  <!-- Gastroc separation L -->
+  <path d="M32,238 Q32,252 34,266" stroke="#0a1210" stroke-width="0.8" fill="none" opacity="0.6"/>
+  <!-- Medial head R -->
+  <path d="M90,234 Q92,246 92,262 Q90,270 84,270 Q80,268 78,258 Q78,242 80,232 Z" fill="${gc('quadsCh')}" opacity="${ga('quadsCh')}" filter="${gg('quadsCh')}"/>
+  <!-- Lateral head R -->
+  <path d="M92,234 Q96,246 96,262 Q94,270 90,269 Q87,265 86,254 Q86,240 90,232 Z" fill="${gc('quadsCh')}" opacity="${ga('quadsCh')*0.85}" filter="${gg('quadsCh')}"/>
+  <path d="M88,238 Q88,252 86,266" stroke="#0a1210" stroke-width="0.8" fill="none" opacity="0.6"/>
+
+  <!-- Achilles tendons -->
+  <path d="M30,268 Q33,276 33,284" stroke="#2e4038" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M90,268 Q87,276 87,284" stroke="#2e4038" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- LABEL -->
+  <text x="60" y="300" text-anchor="middle" fill="#2e4038" font-size="7.5" font-family="'JetBrains Mono',monospace" letter-spacing="1.5">ARRIÈRE</text>
 </svg>`;
 
-  // Build compact legend — vertical, fits in narrow card
+  // ── LEGEND ──────────────────────────────────────────────────────
   const shown = new Set();
   const legendRows = Object.entries(muscles).map(([key, m]) => {
     if (shown.has(m.key)) return '';
@@ -2168,53 +2254,49 @@ function renderMuscleMap() {
     const grade = GRADE_LABELS[m.idx];
     const color = GRADE_COLORS[m.idx];
     const cls = GRADE_CLASSES[m.idx];
-    const desc = GRADE_DESC[m.idx];
     const e = EXERCISES[m.key];
     const prog = getCurrentProg();
     const p = prog[m.key];
     const isTime = p?.unit === 's';
-    const cur = p ? p.sets.map(v=>isTime?v+'s':v+' reps').join(' / ') : '';
-    // Progress bar width based on idx
+    const cur = p ? p.sets.map(v => isTime ? v+'s' : v+' reps').join(' / ') : '';
     const pct = Math.round((m.idx / 7) * 100);
-    return `<div class="muscle-legend-row">
-      <div style="display:flex;align-items:center;gap:8px;flex:1;">
-        <div style="width:10px;height:10px;border-radius:50%;background:${color};box-shadow:0 0 ${4+m.idx*2}px ${color}99;flex-shrink:0;"></div>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span class="muscle-legend-name" style="font-size:11px;">${e?.name || key}</span>
-            <span class="muscle-legend-grade ${cls}" style="font-size:12px;">${grade}</span>
-          </div>
-          <div style="background:var(--bg);border-radius:2px;height:3px;margin-top:3px;overflow:hidden;">
-            <div style="height:3px;width:${pct}%;background:${color};border-radius:2px;box-shadow:0 0 4px ${color};transition:width 0.6s ease;"></div>
-          </div>
+    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div style="width:9px;height:9px;border-radius:50%;background:${color};box-shadow:0 0 ${3+m.idx*2}px ${color}bb;flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:4px;">
+          <span style="font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;">${e?.name || key}</span>
+          <span class="${cls}" style="font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;">${grade}</span>
         </div>
+        <div style="background:var(--bg);border-radius:2px;height:2.5px;margin-top:3px;">
+          <div style="height:2.5px;width:${pct}%;background:${color};border-radius:2px;box-shadow:0 0 3px ${color};"></div>
+        </div>
+        <div style="font-size:9px;color:var(--text3);margin-top:1px;font-family:'JetBrains Mono',monospace;">${cur}</div>
       </div>
     </div>`;
-  }).join('');
+  }).filter(Boolean).join('');
 
   // Grade scale bar
   const GRADE_LABELS_ALL = ['F','D','C','B','A','S','S+','S++'];
   const scaleHtml = GRADE_LABELS_ALL.map((g,i) => {
     const c = GRADE_COLORS[i];
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
-      <div style="height:6px;width:100%;background:${c};border-radius:1px;opacity:0.9;box-shadow:0 0 ${i*2}px ${c};"></div>
-      <span style="font-family:'JetBrains Mono',monospace;font-size:8px;color:${c};font-weight:700;">${g}</span>
+      <div style="height:5px;width:100%;background:${c};border-radius:1px;box-shadow:0 0 ${i*2}px ${c};"></div>
+      <span style="font-size:7.5px;color:${c};font-weight:700;font-family:'JetBrains Mono',monospace;">${g}</span>
     </div>`;
   }).join('');
 
   document.getElementById('muscle-map-content').innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:12px;">
-      <div style="display:flex;justify-content:center;gap:6px;">
-        ${svgFront}
-        ${svgBack}
+    <div style="display:flex;flex-direction:column;gap:14px;height:100%;">
+      <div style="display:flex;justify-content:center;gap:4px;">
+        ${front}
+        ${back}
       </div>
-      <div>
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">Niveau par groupe</div>
+      <div style="flex:1;">
         ${legendRows}
         <div style="margin-top:12px;">
-          <div style="font-size:9px;color:var(--text3);margin-bottom:5px;letter-spacing:0.5px;">ÉCHELLE</div>
+          <div style="font-size:8.5px;color:var(--text3);margin-bottom:4px;letter-spacing:0.5px;text-transform:uppercase;">Échelle niveau</div>
           <div style="display:flex;gap:3px;">${scaleHtml}</div>
-          <div style="font-size:9px;color:var(--text3);margin-top:5px;">Référence : performance poids de corps</div>
+          <div style="font-size:8.5px;color:var(--text3);margin-top:4px;">Référence : performance poids de corps</div>
         </div>
       </div>
     </div>`;
