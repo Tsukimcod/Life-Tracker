@@ -6,6 +6,7 @@
 <title>Life Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
 :root {
   --bg: #0D0F0E;
@@ -523,6 +524,79 @@ select.form-control option { background: var(--bg3); }
   .metric-grid { grid-template-columns: 1fr 1fr; }
   .session-row { grid-template-columns: 70px 1fr auto; gap: 8px; }
 }
+
+/* ════════════════════════════════════════
+   STYLES PAGE SANTÉ
+════════════════════════════════════════ */
+:root {
+  --heart:      #FF6B8A;
+  --heart-dim:  rgba(255,107,138,0.12);
+  --sleep:      #7B68EE;
+  --sleep-dim:  rgba(123,104,238,0.12);
+  --hearing-dim: rgba(255,179,71,0.12);
+  --spo2:       #5BA4FF;
+  --spo2-dim:   rgba(91,164,255,0.12);
+}
+.sync-bar { display:flex; align-items:center; gap:10px; padding:10px 16px; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:20px; font-size:12px; color:var(--text2); }
+.sync-bar .sync-status { margin-left:auto; display:flex; align-items:center; gap:6px; }
+.sync-dot { width:6px; height:6px; border-radius:50%; background:var(--text3); }
+.sync-dot.ok  { background:var(--green); box-shadow:0 0 6px var(--green); }
+.sync-dot.err { background:var(--red); }
+.sync-dot.syncing { background:var(--amber); animation:pulse-line 0.8s ease-in-out infinite; }
+.metric-box.cardio    { border-color:var(--heart);   background:var(--heart-dim); }
+.metric-box.sleep-c   { border-color:var(--sleep);   background:var(--sleep-dim); }
+.metric-box.hearing-c { border-color:var(--amber);   background:var(--hearing-dim); }
+.metric-box.spo2-c    { border-color:var(--spo2);    background:var(--spo2-dim); }
+.metric-box.cardio    .metric-value { color:var(--heart); }
+.metric-box.sleep-c   .metric-value { color:var(--sleep); }
+.metric-box.hearing-c .metric-value { color:var(--amber); }
+.metric-box.spo2-c    .metric-value { color:var(--spo2); }
+.health-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.health-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+.health-tab { }
+.chart-wrap.h160 { height:160px; }
+.chart-wrap.h200 { height:200px; }
+.chart-wrap.h120 { height:120px; }
+.sleep-bar-wrap { height:20px; border-radius:6px; overflow:hidden; display:flex; margin:12px 0 6px; }
+.sleep-segment { height:100%; transition:width 0.6s ease; }
+.sleep-seg-deep  { background:#7B68EE; }
+.sleep-seg-rem   { background:#A78BFA; }
+.sleep-seg-core  { background:#C4B5FD; }
+.sleep-seg-awake { background:var(--bg4); }
+.sleep-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:8px; }
+.sleep-legend-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--text2); }
+.sleep-legend-dot { width:8px; height:8px; border-radius:2px; }
+.score-ring-wrap { display:flex; align-items:center; gap:20px; padding:8px 0; }
+.score-ring { position:relative; width:80px; height:80px; flex-shrink:0; }
+.score-ring-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:'JetBrains Mono',monospace; font-size:15px; font-weight:700; color:var(--text); }
+.score-ring-info { flex:1; }
+.score-ring-title { font-size:13px; font-weight:600; color:var(--text); }
+.score-ring-sub   { font-size:12px; color:var(--text2); margin-top:3px; line-height:1.5; }
+.score-ring-zone  { display:inline-block; margin-top:6px; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+.db-gauge-wrap { margin:10px 0; }
+.db-gauge-label { display:flex; justify-content:space-between; font-size:11px; color:var(--text3); margin-bottom:4px; }
+.db-gauge-track { height:8px; border-radius:4px; background:linear-gradient(to right,#4CAF50 0%,#4CAF50 50%,#FFB347 50%,#FFB347 75%,#FF5C5C 75%,#FF5C5C 100%); position:relative; }
+.db-gauge-needle { position:absolute; top:-3px; width:3px; height:14px; background:white; border-radius:2px; transform:translateX(-50%); transition:left 0.5s ease; box-shadow:0 0 4px rgba(0,0,0,0.5); }
+.import-zone { border:2px dashed var(--border2); border-radius:var(--radius); padding:32px; text-align:center; cursor:pointer; transition:border-color 0.2s, background 0.2s; position:relative; }
+.import-zone:hover, .import-zone.drag-over { border-color:var(--green); background:var(--green-dim); }
+.import-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.import-icon { font-size:32px; margin-bottom:8px; }
+.import-title { font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.import-sub { font-size:12px; color:var(--text3); }
+.import-progress { display:none; margin-top:16px; }
+.import-progress.show { display:block; }
+.import-progress-bar { height:4px; background:var(--bg3); border-radius:2px; overflow:hidden; margin-bottom:8px; }
+.import-progress-fill { height:100%; background:var(--green); border-radius:2px; width:0%; transition:width 0.3s ease; }
+.import-progress-text { font-size:12px; color:var(--text2); text-align:center; }
+.health-table { width:100%; border-collapse:collapse; font-size:12px; }
+.health-table th { text-align:left; padding:6px 10px; font-size:10px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text3); border-bottom:1px solid var(--border); }
+.health-table td { padding:8px 10px; border-bottom:1px solid var(--border); color:var(--text2); }
+.health-table tr:last-child td { border-bottom:none; }
+.health-table .val { font-family:'JetBrains Mono',monospace; color:var(--text); font-size:13px; }
+.health-table .good { color:var(--green); }
+.health-table .warn { color:var(--amber); }
+.health-table .bad  { color:var(--red); }
+@media (max-width:768px) { .health-grid-2, .health-grid-3 { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -546,10 +620,9 @@ select.form-control option { background: var(--bg3); }
       <span class="nav-icon">💪</span>
       <span>Musculation</span>
     </button>
-    <button class="nav-item soon">
+    <button class="nav-item" onclick="showPage('sante')">
       <span class="nav-icon">❤️</span>
       <span>Santé</span>
-      <span class="nav-badge">soon</span>
     </button>
   </div>
 
@@ -567,7 +640,7 @@ select.form-control option { background: var(--bg3); }
     </button>
   </div>
 
-  <div class="sidebar-footer">v1.1 · Course + Muscu</div>
+  <div class="sidebar-footer">v1.2 · Course + Muscu + Santé</div>
 </nav>
 
 <!-- ══ MAIN ══ -->
@@ -870,6 +943,151 @@ select.form-control option { background: var(--bg3); }
   </div>
 </div><!-- /page-strength -->
 
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     PAGE : SANTÉ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="page-sante" class="page">
+  <div class="page-header">
+    <div class="page-header-top">
+      <div>
+        <div class="page-title"><span class="pulse-dot"></span>Santé</div>
+        <div class="page-subtitle" id="health-subtitle">Chargement des données...</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="health-last-sync" style="font-size:11px;color:var(--text3);"></span>
+        <button class="btn btn-ghost" id="btn-sync-health" onclick="healthSyncNow()">↻ Synchroniser</button>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="sub-tabs">
+      <button class="sub-tab active" onclick="showHealthTab('overview')">Vue d'ensemble</button>
+      <button class="sub-tab" onclick="showHealthTab('cardio')">❤️ Cardio</button>
+      <button class="sub-tab" onclick="showHealthTab('sleep')">🌙 Sommeil</button>
+      <button class="sub-tab" onclick="showHealthTab('activity')">👟 Activité</button>
+      <button class="sub-tab" onclick="showHealthTab('body')">🩺 Biométrie</button>
+      <button class="sub-tab" onclick="showHealthTab('import')">⬆ Import</button>
+    </div>
+
+    <!-- ── OVERVIEW ── -->
+    <div id="htab-overview" class="health-tab">
+      <div class="sync-bar">
+        <span>🔗 Dernière sync iOS Shortcuts</span>
+        <span id="sync-time-display" style="font-family:'JetBrains Mono',monospace;font-size:11px;">—</span>
+        <div class="sync-status"><div class="sync-dot" id="sync-dot"></div><span id="sync-status-text" style="font-size:11px;">—</span></div>
+      </div>
+      <div class="metric-grid" id="health-key-metrics"></div>
+      <div class="health-grid-2">
+        <div class="card"><div class="card-title">VO2 Max — Aptitude cardiovasculaire</div><div id="vo2max-ring-wrap"></div><div class="chart-wrap h120" style="margin-top:12px;"><canvas id="vo2maxChart"></canvas></div></div>
+        <div class="card"><div class="card-title">HRV — Variabilité cardiaque (récupération)</div><div id="hrv-ring-wrap"></div><div class="chart-wrap h120" style="margin-top:12px;"><canvas id="hrvChart"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">Nuit dernière — Sommeil</div><div id="sleep-overview-content"></div></div>
+      <div class="health-grid-3">
+        <div class="card"><div class="card-title">Pas aujourd'hui</div><div id="steps-today-display"></div></div>
+        <div class="card"><div class="card-title">Calories actives</div><div id="calories-today-display"></div></div>
+        <div class="card"><div class="card-title">Exposition sonore</div><div id="hearing-today-display"></div></div>
+      </div>
+      <div class="card"><div class="card-title">Évolution 30 jours</div><div class="chart-wrap h200"><canvas id="overviewChart"></canvas></div></div>
+    </div>
+
+    <!-- ── CARDIO ── -->
+    <div id="htab-cardio" class="health-tab" style="display:none;">
+      <div class="metric-grid" id="cardio-metrics"></div>
+      <div class="health-grid-2">
+        <div class="card"><div class="card-title">FC au repos — 90 jours</div><div class="chart-wrap h200"><canvas id="rhrChart"></canvas></div><div id="rhr-stats" style="margin-top:10px;font-size:12px;color:var(--text3);"></div></div>
+        <div class="card"><div class="card-title">FC pendant le sommeil</div><div class="chart-wrap h200"><canvas id="sleepHrChart"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">HRV détaillée — SDNN (ms)</div><div class="chart-wrap h200"><canvas id="hrvDetailChart"></canvas></div><div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;" id="hrv-detail-stats"></div></div>
+      <div class="card"><div class="card-title">VO2 Max — Cardio Fitness Apple</div><div class="score-ring-wrap" id="vo2max-detail-ring"></div><div class="chart-wrap h160" style="margin-top:16px;"><canvas id="vo2maxDetailChart"></canvas></div><div style="margin-top:12px;font-size:12px;color:var(--text3);" id="vo2max-interp"></div></div>
+      <div class="card"><div class="card-title">Mesures FC récentes</div><table class="health-table"><thead><tr><th>Date</th><th>BPM</th><th>Contexte</th><th>Source</th></tr></thead><tbody id="hr-raw-tbody"></tbody></table></div>
+    </div>
+
+    <!-- ── SOMMEIL ── -->
+    <div id="htab-sleep" class="health-tab" style="display:none;">
+      <div class="metric-grid" id="sleep-metrics"></div>
+      <div class="card"><div class="card-title">Dernière nuit — Détail des phases</div><div id="sleep-last-detail"></div></div>
+      <div class="card"><div class="card-title">Durée de sommeil — 30 nuits</div><div class="chart-wrap h200"><canvas id="sleepDurationChart"></canvas></div></div>
+      <div class="health-grid-2">
+        <div class="card"><div class="card-title">Distribution phases moyennes</div><div style="height:200px;display:flex;align-items:center;justify-content:center;"><canvas id="sleepPhasePieChart" style="max-height:180px;max-width:180px;"></canvas></div><div id="sleep-phase-legend" style="margin-top:8px;"></div></div>
+        <div class="card"><div class="card-title">Efficacité du sommeil — 30 nuits</div><div class="chart-wrap h200"><canvas id="sleepEffChart"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">Historique détaillé</div><table class="health-table"><thead><tr><th>Nuit</th><th>Coucher</th><th>Réveil</th><th>Total</th><th>Profond</th><th>REM</th><th>Léger</th><th>Éveillé</th><th>Efficacité</th></tr></thead><tbody id="sleep-history-tbody"></tbody></table></div>
+    </div>
+
+    <!-- ── ACTIVITÉ ── -->
+    <div id="htab-activity" class="health-tab" style="display:none;">
+      <div class="metric-grid" id="activity-metrics"></div>
+      <div class="card"><div class="card-title">Pas quotidiens — 30 jours</div><div class="chart-wrap h200"><canvas id="stepsChart"></canvas></div><div id="steps-stats" style="margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;"></div></div>
+      <div class="health-grid-2">
+        <div class="card"><div class="card-title">Calories actives — 30 jours</div><div class="chart-wrap h160"><canvas id="caloriesChart"></canvas></div></div>
+        <div class="card"><div class="card-title">Minutes d'exercice — 30 jours</div><div class="chart-wrap h160"><canvas id="exerciseChart"></canvas></div></div>
+      </div>
+      <div class="card"><div class="card-title">SpO2 — Saturation en oxygène</div><div class="chart-wrap h160"><canvas id="spo2Chart"></canvas></div><div style="font-size:11px;color:var(--text3);margin-top:8px;">Normal : 95-100% · Attention : 90-95% · Urgent : &lt; 90%</div></div>
+      <div class="card"><div class="card-title">Fréquence respiratoire (resp/min)</div><div class="chart-wrap h160"><canvas id="respChart"></canvas></div><div style="font-size:11px;color:var(--text3);margin-top:8px;">Normale au repos : 12-20 resp/min</div></div>
+    </div>
+
+    <!-- ── BIOMÉTRIE ── -->
+    <div id="htab-body" class="health-tab" style="display:none;">
+      <div class="metric-grid" id="body-metrics-display"></div>
+      <div class="card"><div class="card-title">Poids (kg)</div><div class="chart-wrap h200"><canvas id="weightChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Température poignet — Écart vs baseline (°C)</div><div class="chart-wrap h160"><canvas id="tempChart"></canvas></div><div style="font-size:11px;color:var(--text3);margin-top:8px;">Apple Watch mesure l'écart par rapport à ta baseline. &gt; +0.5°C = possible fièvre.</div></div>
+      <div class="card">
+        <div class="card-title">🦻 Santé auditive — Exposition sonore</div>
+        <div style="margin-bottom:16px;" id="hearing-gauge-wrap"></div>
+        <div class="health-grid-2">
+          <div><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Casque / AirPods (30 jours)</div><div class="chart-wrap h160"><canvas id="hearingHpChart"></canvas></div></div>
+          <div><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Environnement (30 jours)</div><div class="chart-wrap h160"><canvas id="hearingEnvChart"></canvas></div></div>
+        </div>
+        <div style="margin-top:12px;padding:12px;background:var(--bg3);border-radius:var(--radius-sm);font-size:12px;color:var(--text2);">
+          <strong style="color:var(--text);">Seuils OMS :</strong>
+          <span style="color:var(--green);">● &lt; 70 dB</span> sûr en continu ·
+          <span style="color:var(--amber);">● 70-85 dB</span> max 8h/jour ·
+          <span style="color:var(--red);">● &gt; 85 dB</span> risque en exposition longue
+        </div>
+      </div>
+    </div>
+
+    <!-- ── IMPORT ── -->
+    <div id="htab-import" class="health-tab" style="display:none;">
+      <div class="card">
+        <div class="card-title">📱 Importer l'historique Apple Health (XML)</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.7;">
+          <strong style="color:var(--text);">Comment exporter depuis iPhone :</strong><br>
+          1. App <strong>Santé</strong> → ta photo en haut à droite<br>
+          2. Défiler → <strong>Exporter les données de santé</strong><br>
+          3. Partager le <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;">export.zip</code> → dézipper → glisser <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;">export.xml</code> ici
+        </div>
+        <div class="import-zone" id="import-zone" ondragover="healthDragOver(event)" ondragleave="healthDragLeave(event)" ondrop="healthDrop(event)">
+          <input type="file" accept=".xml" onchange="healthFileSelected(event)">
+          <div class="import-icon">📂</div>
+          <div class="import-title">Glisser export.xml ici ou cliquer pour sélectionner</div>
+          <div class="import-sub">Fichier XML Apple Health · jusqu'à 500 Mo</div>
+        </div>
+        <div class="import-progress" id="import-progress"><div class="import-progress-bar"><div class="import-progress-fill" id="import-progress-fill"></div></div><div class="import-progress-text" id="import-progress-text">Envoi en cours...</div></div>
+        <div id="import-result" style="display:none;margin-top:16px;padding:12px;border-radius:var(--radius-sm);font-size:13px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚡ Configuration sync automatique (iOS Shortcuts)</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.7;">Le Raccourci iOS envoie tes données toutes les heures. Copie l'URL et le token dans le Raccourci.</div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>URL de l'API</label>
+          <div style="display:flex;gap:8px;"><input type="text" class="form-control" id="api-url-display" value="https://TON-SITE.vercel.app/api/health-sync" readonly><button class="btn btn-ghost" onclick="copyApiUrl()">Copier</button></div>
+        </div>
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:14px;font-size:12px;color:var(--text2);line-height:1.8;">
+          <strong style="color:var(--text);display:block;margin-bottom:8px;">📋 Template JSON Raccourci iOS :</strong>
+          <pre id="shortcut-template" style="background:var(--bg4);padding:10px;border-radius:6px;margin-top:6px;font-size:11px;overflow-x:auto;white-space:pre-wrap;color:var(--green);"></pre>
+          <button class="btn btn-ghost" style="margin-top:8px;font-size:12px;" onclick="copyShortcutTemplate()">Copier le template</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Historique des synchronisations</div>
+        <table class="health-table"><thead><tr><th>Date & heure</th><th>Source</th><th>Enregistrements</th><th>Statut</th></tr></thead><tbody id="sync-log-tbody"></tbody></table>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /page-sante -->
+
 </main>
 </div>
 
@@ -957,12 +1175,15 @@ function showPage(name) {
   document.getElementById('page-'+name).classList.add('active');
   event.currentTarget.classList.add('active');
   if (name === 'strength') {
-    // Reset all str-tabs, show today
     document.querySelectorAll('.str-tab').forEach(t => t.style.display = 'none');
     document.querySelectorAll('[id^=stab-]').forEach(b => b.classList.remove('active'));
     document.getElementById('today-tab').style.display = '';
     document.getElementById('stab-today').classList.add('active');
     renderStrToday();
+  }
+  if (name === 'sante') {
+    initHealthPage();
+    startHealthAutoSync();
   }
 }
 
@@ -2594,6 +2815,364 @@ function deleteStrLog(id) {
 
 document.getElementById('rec-date').value = today();
 renderDashboard();
+
+// ═══════════════════════════════════════════════════════
+//  PAGE SANTÉ — CONFIG
+//  ⚠️  À remplir avec tes vraies valeurs après le déploiement Vercel + Supabase
+// ═══════════════════════════════════════════════════════
+const HEALTH_CONFIG = {
+  supabaseUrl:  'https://XXXX.supabase.co',   // ← coller ton URL Supabase
+  supabaseKey:  'eyJh...',                     // ← clé anon (publique, lecture seule)
+  importSecret: '',                            // ← ton IMPORT_SECRET Vercel (pour upload XML)
+  syncSecret:   '',                            // ← ton SYNC_SECRET Vercel (pour le Raccourci)
+  apiBase:      '/api'                         // ← ne pas modifier
+};
+
+// ── Client Supabase léger (pas besoin du SDK complet)
+const SB = {
+  async query(table, opts = {}) {
+    let url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?`;
+    if (opts.select) url += `select=${encodeURIComponent(opts.select)}&`;
+    if (opts.filter) url += `${opts.filter}&`;
+    if (opts.order)  url += `order=${opts.order}&`;
+    if (opts.limit)  url += `limit=${opts.limit}&`;
+    const res = await fetch(url, {
+      headers: { 'apikey': HEALTH_CONFIG.supabaseKey, 'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}` }
+    });
+    if (!res.ok) throw new Error(`Supabase ${res.status}`);
+    return res.json();
+  }
+};
+
+// ── État global
+const HD = { loaded: false, charts: {}, cache: {}, activeHealthTab: 'overview' };
+
+// ── Navigation tabs santé
+function showHealthTab(tab) {
+  document.querySelectorAll('.health-tab').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('#page-sante .sub-tab').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('htab-' + tab);
+  if (el) el.style.display = 'block';
+  const idx = ['overview','cardio','sleep','activity','body','import'].indexOf(tab);
+  const tabs = document.querySelectorAll('#page-sante .sub-tab');
+  if (tabs[idx]) tabs[idx].classList.add('active');
+  HD.activeHealthTab = tab;
+  if (!HD.loaded) return;
+  if (tab === 'cardio')   renderCardioTab();
+  if (tab === 'sleep')    renderSleepTab();
+  if (tab === 'activity') renderActivityTab();
+  if (tab === 'body')     renderBodyTab();
+  if (tab === 'import')   renderImportTab();
+}
+
+// ── Chargement initial
+async function initHealthPage() {
+  if (HD.loaded) return;
+  const sub = document.getElementById('health-subtitle');
+  try {
+    const [summary, vo2, hrv, rhr, sleepData, steps, activity, spo2, hearing, weight, temp, syncLogs] = await Promise.all([
+      SB.query('health_daily_summary', { select: '*', limit: 90 }),
+      SB.query('vo2max', { select: 'recorded_at,value', order: 'recorded_at.desc', limit: 90 }),
+      SB.query('hrv', { select: 'recorded_at,sdnn_ms', order: 'recorded_at.desc', limit: 90 }),
+      SB.query('resting_heart_rate', { select: 'recorded_at,bpm', order: 'recorded_at.desc', limit: 90 }),
+      SB.query('sleep', { select: '*', order: 'sleep_start.desc', limit: 30 }),
+      SB.query('steps', { select: 'recorded_date,step_count,distance_km', order: 'recorded_date.desc', limit: 30 }),
+      SB.query('activity', { select: '*', order: 'recorded_date.desc', limit: 30 }),
+      SB.query('spo2', { select: 'recorded_at,percentage', order: 'recorded_at.desc', limit: 60 }),
+      SB.query('hearing', { select: '*', order: 'recorded_date.desc', limit: 30 }),
+      SB.query('body_metrics', { select: '*', order: 'recorded_date.desc', limit: 60 }),
+      SB.query('body_temperature', { select: 'recorded_at,celsius,deviation', order: 'recorded_at.desc', limit: 30 }),
+      SB.query('sync_log', { select: '*', order: 'synced_at.desc', limit: 10 })
+    ]);
+    HD.cache = { summary, vo2, hrv, rhr, sleepData, steps, activity, spo2, hearing, weight, temp, syncLogs };
+    HD.loaded = true;
+    renderHealthOverview();
+    updateSyncStatus(syncLogs);
+    if (sub) sub.textContent = `${summary.length} jours d'historique · Apple Health`;
+  } catch (err) {
+    console.error('[health]', err);
+    if (sub) sub.textContent = 'Erreur — vérifier la config Supabase dans HEALTH_CONFIG';
+  }
+}
+
+// ── Statut de la dernière sync
+function updateSyncStatus(logs) {
+  const dot = document.getElementById('sync-dot');
+  const text = document.getElementById('sync-status-text');
+  const time = document.getElementById('sync-time-display');
+  if (!logs?.length) { if (text) text.textContent = 'Jamais synchronisé'; return; }
+  const last = logs[0];
+  const d = new Date(last.synced_at);
+  const minAgo = Math.round((Date.now() - d) / 60000);
+  if (time) time.textContent = d.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  if (dot)  dot.className = 'sync-dot ' + (last.status === 'ok' ? 'ok' : 'err');
+  if (text) text.textContent = minAgo < 5 ? 'À jour' : minAgo < 60 ? `il y a ${minAgo} min` : `il y a ${Math.round(minAgo/60)}h`;
+  const el = document.getElementById('health-last-sync');
+  if (el && last.status === 'ok') el.textContent = `Sync: ${d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}`;
+}
+
+// ═══ OVERVIEW ═══
+function renderHealthOverview() {
+  const { summary, vo2, hrv, rhr, sleepData, steps, activity, spo2 } = HD.cache;
+  const today = summary?.[0] || {};
+  const lastVo2 = vo2?.[0], lastHrv = hrv?.[0], lastRhr = rhr?.[0];
+
+  // Métriques clés
+  const km = document.getElementById('health-key-metrics');
+  if (km) km.innerHTML = [
+    { label: 'VO2 Max', value: lastVo2?.value?.toFixed(1) ?? '—', sub: 'mL/kg/min', cls: 'highlight' },
+    { label: 'FC au repos', value: lastRhr?.bpm?.toFixed(0) ?? '—', sub: 'bpm', cls: 'cardio' },
+    { label: 'HRV (SDNN)', value: lastHrv?.sdnn_ms?.toFixed(0) ?? '—', sub: 'ms' },
+    { label: 'Pas aujourd\'hui', value: today.step_count?.toLocaleString('fr-FR') ?? '—', sub: 'pas' },
+    { label: 'Sommeil', value: today.sleep_duration ? hFmtMin(today.sleep_duration) : '—', sub: 'durée', cls: 'sleep-c' },
+    { label: 'SpO2', value: today.spo2_avg?.toFixed(1) ?? '—', sub: '%', cls: 'spo2-c' },
+  ].map(m => `<div class="metric-box ${m.cls||''}"><div class="metric-label">${m.label}</div><div class="metric-value">${m.value}</div><div class="metric-sub">${m.sub}</div></div>`).join('');
+
+  if (lastVo2) hRenderRing('vo2max-ring-wrap', lastVo2.value, 20, 65, 'VO2 Max', hVo2Zone(lastVo2.value), '#00E87A');
+  if (lastHrv) hRenderRing('hrv-ring-wrap', lastHrv.sdnn_ms, 10, 100, 'HRV SDNN', hHrvZone(lastHrv.sdnn_ms), '#7B68EE');
+  hRenderSleepOverview(sleepData?.[0]);
+  hRenderStepsToday(today);
+  hRenderCaloriesToday(today);
+  hRenderHearingToday(HD.cache.hearing?.[0]);
+  hRenderLineChart('vo2maxChart', vo2?.slice(0,30).reverse(), r=>r.recorded_at?.split('T')[0], r=>r.value, '#00E87A', 'VO2 Max', { fill: true, tension: 0.4 });
+  hRenderLineChart('hrvChart', hrv?.slice(0,30).reverse(), r=>r.recorded_at?.split('T')[0], r=>r.sdnn_ms, '#7B68EE', 'HRV', { fill: true, tension: 0.4 });
+
+  // Chart 30j multi-lignes
+  const data30 = summary?.slice(0,30).reverse() || [];
+  hDestroyChart('overviewChart');
+  const ctx = document.getElementById('overviewChart')?.getContext('2d');
+  if (ctx && data30.length) {
+    HD.charts['overviewChart'] = new Chart(ctx, {
+      type: 'line',
+      data: { labels: data30.map(d=>d.day), datasets: [
+        { label: 'FC repos', data: data30.map(d=>d.resting_hr), borderColor:'#FF6B8A', borderWidth:1.5, pointRadius:0, tension:0.3, yAxisID:'y' },
+        { label: 'HRV', data: data30.map(d=>d.hrv_avg), borderColor:'#7B68EE', borderWidth:1.5, pointRadius:0, tension:0.3, yAxisID:'y2' },
+        { label: 'Sommeil h', data: data30.map(d=>d.sleep_duration?d.sleep_duration/60:null), borderColor:'#A78BFA', borderWidth:1.5, pointRadius:0, tension:0.3, yAxisID:'y2' },
+      ]},
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:true, labels:{ color:'rgba(138,154,142,0.8)', font:{size:11}, boxWidth:12, padding:16 }}, tooltip:{mode:'index',intersect:false}},
+        scales: { x:{ticks:{color:'rgba(138,154,142,0.7)',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},
+          y:{position:'left',ticks:{color:'#FF6B8A',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},
+          y2:{position:'right',ticks:{color:'#7B68EE',font:{size:10}},grid:{display:false}} }}
+    });
+  }
+}
+
+// ═══ CARDIO ═══
+function renderCardioTab() {
+  const { rhr, hrv, vo2, sleepData } = HD.cache;
+  const lastRhr=rhr?.[0], lastHrv=hrv?.[0], lastVo2=vo2?.[0];
+  const avgRhr30 = rhr?.slice(0,30).length ? Math.round(rhr.slice(0,30).reduce((a,r)=>a+r.bpm,0)/Math.min(30,rhr.length)) : null;
+  const cm = document.getElementById('cardio-metrics');
+  if (cm) cm.innerHTML = [
+    { label:'FC repos actuelle', value: lastRhr?.bpm?.toFixed(0)??'—', sub:'bpm', cls:'cardio' },
+    { label:'FC repos moy. 30j', value: avgRhr30??'—', sub:'bpm' },
+    { label:'HRV (SDNN)', value: lastHrv?.sdnn_ms?.toFixed(0)??'—', sub:'ms' },
+    { label:'VO2 Max', value: lastVo2?.value?.toFixed(1)??'—', sub:'mL/kg/min', cls:'highlight' },
+  ].map(m=>`<div class="metric-box ${m.cls||''}"><div class="metric-label">${m.label}</div><div class="metric-value">${m.value}</div><div class="metric-sub">${m.sub}</div></div>`).join('');
+
+  hRenderLineChart('rhrChart', rhr?.slice(0,90).reverse(), r=>r.recorded_at?.split('T')[0], r=>r.bpm, '#FF6B8A', 'FC repos (bpm)', { fill:true, tension:0.3 });
+  const se = document.getElementById('rhr-stats');
+  if (se && rhr?.length) { const vals=rhr.slice(0,30).map(r=>r.bpm); se.innerHTML=`Min 30j : <strong style="color:var(--green)">${Math.min(...vals).toFixed(0)}</strong> bpm &nbsp;·&nbsp; Moy : <strong>${(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)}</strong> bpm &nbsp;·&nbsp; Max : <strong style="color:var(--red)">${Math.max(...vals).toFixed(0)}</strong> bpm`; }
+  hRenderLineChart('sleepHrChart', sleepData?.slice(0,30).reverse(), r=>r.sleep_start?.split('T')[0], r=>r.heart_rate_avg, '#FF6B8A', 'FC sommeil', { tension:0.3 });
+  hRenderLineChart('hrvDetailChart', hrv?.slice(0,90).reverse(), r=>r.recorded_at?.split('T')[0], r=>r.sdnn_ms, '#7B68EE', 'HRV SDNN (ms)', { fill:true, tension:0.3 });
+  const hs = document.getElementById('hrv-detail-stats');
+  if (hs && hrv?.length) { const vals=hrv.slice(0,30).map(r=>r.sdnn_ms).filter(Boolean); hs.innerHTML=[{l:'Actuelle',v:hrv[0]?.sdnn_ms?.toFixed(0)+' ms',c:'highlight'},{l:'Moy 30j',v:(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)+' ms'},{l:'Min / Max',v:Math.min(...vals).toFixed(0)+' / '+Math.max(...vals).toFixed(0)}].map(s=>`<div class="metric-box ${s.c||''}"><div class="metric-label">${s.l}</div><div class="metric-value" style="font-size:18px">${s.v}</div></div>`).join(''); }
+  const dr = document.getElementById('vo2max-detail-ring');
+  if (dr && lastVo2?.value) { const z=hVo2Zone(lastVo2.value),c=2*Math.PI*36,p=Math.min(Math.max((lastVo2.value-20)/45,0),1); dr.innerHTML=`<svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" style="fill:none;stroke:var(--bg4);stroke-width:8"/><circle cx="50" cy="50" r="40" style="fill:none;stroke:#00E87A;stroke-width:8;stroke-linecap:round;stroke-dasharray:${c*2};stroke-dashoffset:${c*2-c*p};transform:rotate(-90deg);transform-origin:50px 50px"/><text x="50" y="54" text-anchor="middle" fill="var(--text)" font-size="16" font-weight="700" font-family="JetBrains Mono">${lastVo2.value.toFixed(1)}</text></svg><div class="score-ring-info"><div class="score-ring-title">VO2 Max : ${lastVo2.value.toFixed(1)} mL/kg/min</div><div class="score-ring-sub">${z.desc}</div><span class="score-ring-zone" style="background:${z.color}22;color:${z.color}">${z.label}</span></div>`; }
+  hRenderLineChart('vo2maxDetailChart', vo2?.slice(0,90).reverse(), r=>r.recorded_at?.split('T')[0], r=>r.value, '#00E87A', 'VO2 Max', { tension:0.3, fill:true });
+  const vi = document.getElementById('vo2max-interp');
+  if (vi && lastVo2?.value) vi.innerHTML=`Ton VO2 Max de <strong style="color:var(--green)">${lastVo2.value.toFixed(1)} mL/kg/min</strong> : ${hVo2Interp(lastVo2.value)}`;
+  const hrb = document.getElementById('hr-raw-tbody');
+  if (hrb) hrb.innerHTML=(HD.cache.summary?.slice(0,10)||[]).map(d=>`<tr><td>${hFmtDate(d.day)}</td><td><span class="val ${d.resting_hr<60?'good':d.resting_hr<80?'':'warn'}">${d.resting_hr??'—'} bpm</span></td><td><span class="badge badge-easy">Repos</span></td><td style="color:var(--text3)">Apple Watch</td></tr>`).join('');
+}
+
+// ═══ SOMMEIL ═══
+function renderSleepTab() {
+  const { sleepData } = HD.cache;
+  const all30 = sleepData?.slice(0,30) || [];
+  const last = all30[0];
+  const avgDur  = all30.length ? Math.round(all30.reduce((a,s)=>a+(s.duration_min||0),0)/all30.length) : null;
+  const avgDeep = all30.length ? Math.round(all30.reduce((a,s)=>a+(s.deep_min||0),0)/all30.length) : null;
+  const avgRem  = all30.length ? Math.round(all30.reduce((a,s)=>a+(s.rem_min||0),0)/all30.length) : null;
+  const avgEff  = all30.length ? (all30.reduce((a,s)=>a+(s.efficiency_pct||0),0)/all30.length).toFixed(1) : null;
+  const sm = document.getElementById('sleep-metrics');
+  if (sm) sm.innerHTML = [
+    { label:'Durée moy. 30j', value: avgDur?hFmtMin(avgDur):'—', sub:'hh:mm', cls:'sleep-c' },
+    { label:'Profond moy.', value: avgDeep?hFmtMin(avgDeep):'—', sub:'deep sleep' },
+    { label:'REM moy.', value: avgRem?hFmtMin(avgRem):'—', sub:'sommeil paradoxal' },
+    { label:'Efficacité moy.', value: avgEff?avgEff+'%':'—', sub:'temps dormant / total', cls: avgEff>=85?'highlight':'' },
+  ].map(m=>`<div class="metric-box ${m.cls||''}"><div class="metric-label">${m.label}</div><div class="metric-value" style="font-size:22px;">${m.value}</div><div class="metric-sub">${m.sub}</div></div>`).join('');
+
+  const ld = document.getElementById('sleep-last-detail');
+  if (ld && last) {
+    const total=last.duration_min||1, pD=Math.round((last.deep_min||0)/total*100), pR=Math.round((last.rem_min||0)/total*100), pC=Math.round((last.core_min||0)/total*100), pA=Math.round((last.awake_min||0)/total*100);
+    ld.innerHTML=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">${[['Profond',last.deep_min,'#7B68EE',pD],['REM',last.rem_min,'#A78BFA',pR],['Léger',last.core_min,'#C4B5FD',pC],['Éveillé',last.awake_min,'var(--text3)',pA]].map(([l,m,c,p])=>`<div style="text-align:center;"><div style="font-size:18px;font-weight:700;color:${c};font-family:'JetBrains Mono',monospace;">${hFmtMin(m||0)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">${l} (${p}%)</div></div>`).join('')}</div><div class="sleep-bar-wrap"><div class="sleep-segment sleep-seg-deep" style="width:${pD}%"></div><div class="sleep-segment sleep-seg-rem" style="width:${pR}%"></div><div class="sleep-segment sleep-seg-core" style="width:${pC}%"></div><div class="sleep-segment sleep-seg-awake" style="width:${pA}%"></div></div><div class="sleep-legend">${[['Profond','sleep-seg-deep'],['REM','sleep-seg-rem'],['Léger','sleep-seg-core'],['Éveillé','sleep-seg-awake']].map(([l,c])=>`<div class="sleep-legend-item"><div class="sleep-legend-dot ${c}"></div>${l}</div>`).join('')}</div><div style="margin-top:10px;font-size:12px;color:var(--text3);">Coucher : <strong style="color:var(--text)">${hFmtTime(last.sleep_start)}</strong> · Réveil : <strong style="color:var(--text)">${hFmtTime(last.sleep_end)}</strong> · Efficacité : <strong style="color:${last.efficiency_pct>=85?'var(--green)':last.efficiency_pct>=70?'var(--amber)':'var(--red)'}">${last.efficiency_pct?.toFixed(1)??'—'}%</strong></div>`;
+  }
+
+  // Chart durée (barres en heures)
+  hDestroyChart('sleepDurationChart');
+  const ctx = document.getElementById('sleepDurationChart')?.getContext('2d');
+  if (ctx && all30.length) {
+    const data = all30.slice().reverse();
+    HD.charts['sleepDurationChart'] = new Chart(ctx, { type:'bar', data:{ labels:data.map(r=>r.sleep_start?.split('T')[0]), datasets:[{ label:'Sommeil (h)', data:data.map(r=>r.duration_min?+(r.duration_min/60).toFixed(2):0), backgroundColor: data.map(r=>(r.duration_min||0)/60>=7?'rgba(123,104,238,0.8)':'rgba(123,104,238,0.4)'), borderRadius:3 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false}}, scales:{ x:{ticks:{color:'rgba(138,154,142,0.7)',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{display:false}}, y:{min:0,max:10,ticks:{color:'rgba(138,154,142,0.7)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}} }}});
+  }
+
+  // Pie phases
+  if (all30.length) {
+    const avgD=all30.reduce((a,s)=>a+(s.deep_min||0),0)/all30.length, avgR=all30.reduce((a,s)=>a+(s.rem_min||0),0)/all30.length, avgC=all30.reduce((a,s)=>a+(s.core_min||0),0)/all30.length, avgA=all30.reduce((a,s)=>a+(s.awake_min||0),0)/all30.length;
+    hDestroyChart('sleepPhasePieChart');
+    const ctx2 = document.getElementById('sleepPhasePieChart')?.getContext('2d');
+    if (ctx2) HD.charts['sleepPhasePieChart'] = new Chart(ctx2, { type:'doughnut', data:{ labels:['Profond','REM','Léger','Éveillé'], datasets:[{ data:[avgD,avgR,avgC,avgA], backgroundColor:['#7B68EE','#A78BFA','#C4B5FD','#2A2F2D'], borderWidth:0 }]}, options:{ plugins:{legend:{display:false}}, cutout:'65%', responsive:true, maintainAspectRatio:true }});
+    const tot=avgD+avgR+avgC+avgA, le=document.getElementById('sleep-phase-legend');
+    if (le) le.innerHTML=`<div class="sleep-legend">${[['Profond',avgD,'#7B68EE'],['REM',avgR,'#A78BFA'],['Léger',avgC,'#C4B5FD'],['Éveillé',avgA,'#556059']].map(([l,v,c])=>`<div class="sleep-legend-item"><div class="sleep-legend-dot" style="background:${c}"></div>${l}: <strong style="color:${c}">${Math.round(v/tot*100)}%</strong></div>`).join('')}</div>`;
+  }
+
+  hRenderLineChart('sleepEffChart', all30.slice().reverse(), r=>r.sleep_start?.split('T')[0], r=>r.efficiency_pct||0, '#A78BFA', 'Efficacité (%)', { min:50, max:100, tension:0.3 });
+
+  const tb = document.getElementById('sleep-history-tbody');
+  if (tb) tb.innerHTML = all30.map(s=>{const eff=s.efficiency_pct,ec=eff>=85?'good':eff>=70?'warn':'bad';return`<tr><td>${hFmtDate(s.sleep_start?.split('T')[0])}</td><td class="val">${hFmtTime(s.sleep_start)}</td><td class="val">${hFmtTime(s.sleep_end)}</td><td class="val">${hFmtMin(s.duration_min||0)}</td><td style="color:#7B68EE">${hFmtMin(s.deep_min||0)}</td><td style="color:#A78BFA">${hFmtMin(s.rem_min||0)}</td><td style="color:#C4B5FD">${hFmtMin(s.core_min||0)}</td><td style="color:var(--text3)">${hFmtMin(s.awake_min||0)}</td><td><span class="val ${ec}">${eff?.toFixed(1)??'—'}%</span></td></tr>`}).join('');
+}
+
+// ═══ ACTIVITÉ ═══
+function renderActivityTab() {
+  const { steps, activity, spo2 } = HD.cache;
+  const all30S = steps?.slice(0,30)||[], all30A = activity?.slice(0,30)||[];
+  const avgSteps = all30S.length?Math.round(all30S.reduce((a,s)=>a+(s.step_count||0),0)/all30S.length):null;
+  const avgCal   = all30A.length?Math.round(all30A.reduce((a,a2)=>a+(a2.active_calories||0),0)/all30A.length):null;
+  const avgExer  = all30A.length?Math.round(all30A.reduce((a,a2)=>a+(a2.exercise_minutes||0),0)/all30A.length):null;
+  const am = document.getElementById('activity-metrics');
+  if (am) am.innerHTML=[{label:'Pas moy. 30j',value:avgSteps?.toLocaleString('fr-FR')??'—',sub:'pas/jour',cls:avgSteps>=10000?'highlight':''},{label:'Calories moy.',value:avgCal??'—',sub:'kcal actives/j'},{label:'Exercice moy.',value:avgExer?avgExer+' min':'—',sub:'min/jour'},{label:'SpO2 dernière',value:spo2?.[0]?.percentage?.toFixed(1)??'—',sub:'%',cls:'spo2-c'}].map(m=>`<div class="metric-box ${m.cls||''}"><div class="metric-label">${m.label}</div><div class="metric-value">${m.value}</div><div class="metric-sub">${m.sub}</div></div>`).join('');
+
+  // Pas — barres
+  hDestroyChart('stepsChart');
+  const ctxS = document.getElementById('stepsChart')?.getContext('2d');
+  if (ctxS && all30S.length) { const data=all30S.slice().reverse(); HD.charts['stepsChart']=new Chart(ctxS,{type:'bar',data:{labels:data.map(r=>r.recorded_date),datasets:[{label:'Pas',data:data.map(r=>r.step_count||0),backgroundColor:data.map(r=>(r.step_count||0)>=10000?'rgba(0,232,122,0.8)':'rgba(0,232,122,0.4)'),borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'rgba(138,154,142,0.7)',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{display:false}},y:{ticks:{color:'rgba(138,154,142,0.7)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}}}); }
+
+  const ss = document.getElementById('steps-stats');
+  if (ss && all30S.length) { const vals=all30S.map(s=>s.step_count||0),max=Math.max(...vals),min=Math.min(...vals),ab=vals.filter(v=>v>=10000).length; ss.innerHTML=[{l:'Max',v:max.toLocaleString('fr-FR')},{l:'Min',v:min.toLocaleString('fr-FR')},{l:'Moy',v:avgSteps?.toLocaleString('fr-FR')??'—'},{l:'≥ 10k',v:`${ab}/30j`}].map(s=>`<div style="text-align:center;padding:8px;background:var(--bg3);border-radius:var(--radius-sm);"><div style="font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace;">${s.v}</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">${s.l}</div></div>`).join(''); }
+
+  hRenderBarChart('caloriesChart', all30A.slice().reverse(), r=>r.recorded_date, r=>r.active_calories||0, 'rgba(255,179,71,0.6)', 'kcal');
+  hRenderBarChart('exerciseChart', all30A.slice().reverse(), r=>r.recorded_date, r=>r.exercise_minutes||0, 'rgba(91,164,255,0.6)', 'minutes');
+  hRenderLineChart('spo2Chart', spo2?.slice(0,30).reverse(), r=>r.recorded_at?.split('T')[0], r=>r.percentage||0, '#5BA4FF', 'SpO2 (%)', { min:88, max:100, tension:0.3 });
+}
+
+// ═══ BIOMÉTRIE ═══
+function renderBodyTab() {
+  const { weight, temp, hearing } = HD.cache;
+  const lw = weight?.[0];
+  const bm = document.getElementById('body-metrics-display');
+  if (bm) bm.innerHTML=[{label:'Poids',value:lw?.weight_kg?.toFixed(1)??'—',sub:'kg'},{label:'IMC',value:lw?.bmi?.toFixed(1)??'—',sub:'kg/m²'},{label:'Masse grasse',value:lw?.body_fat_pct?lw.body_fat_pct.toFixed(1)+'%':'—',sub:'% corps'},{label:'Temp. poignet',value:temp?.[0]?.deviation!=null?(temp[0].deviation>0?'+':'')+temp[0].deviation?.toFixed(2)+'°':'—',sub:'écart baseline',cls:Math.abs(temp?.[0]?.deviation||0)>0.5?'hearing-c':''}].map(m=>`<div class="metric-box ${m.cls||''}"><div class="metric-label">${m.label}</div><div class="metric-value">${m.value}</div><div class="metric-sub">${m.sub}</div></div>`).join('');
+  hRenderLineChart('weightChart', weight?.slice(0,60).reverse(), r=>r.recorded_date, r=>r.weight_kg||null, '#5BA4FF', 'Poids (kg)', { fill:false, tension:0.3 });
+  hRenderLineChart('tempChart', temp?.slice(0,30).reverse(), r=>r.recorded_at?.split('T')[0], r=>r.deviation, '#FF8C42', 'Écart (°C)', { min:-1, max:1.5, tension:0.3 });
+
+  // Audition
+  const hg = document.getElementById('hearing-gauge-wrap');
+  const lh = hearing?.[0];
+  if (hg && lh) { const db=lh.headphone_exposure_db||lh.env_exposure_db||0,pct=Math.min(db/100*100,100),color=db<70?'var(--green)':db<85?'var(--amber)':'var(--red)',status=db<70?'Sûr':db<85?'Attention':'Dangereux'; hg.innerHTML=`<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px;"><div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:${color};">${db.toFixed(1)} dB</div><div><div style="font-size:13px;font-weight:600;">${status} — Exposition casque</div><div style="font-size:12px;color:var(--text3);">${lh.recorded_date} · ${lh.audio_exposure_events||0} événements forts</div></div></div><div class="db-gauge-wrap"><div class="db-gauge-label"><span>0 dB</span><span>70 dB (sûr)</span><span>85 dB (danger)</span><span>100 dB</span></div><div class="db-gauge-track"><div class="db-gauge-needle" style="left:${pct}%"></div></div></div>`; }
+  hRenderLineChart('hearingHpChart', hearing?.slice(0,30).reverse(), r=>r.recorded_date, r=>r.headphone_exposure_db, '#FFB347', 'dB casque', { min:50, max:100, tension:0.3 });
+  hRenderLineChart('hearingEnvChart', hearing?.slice(0,30).reverse(), r=>r.recorded_date, r=>r.env_exposure_db, '#FFB347', 'dB env.', { min:40, max:100, tension:0.3 });
+}
+
+// ═══ IMPORT ═══
+function renderImportTab() {
+  const tmpl = document.getElementById('shortcut-template');
+  if (tmpl) tmpl.textContent = JSON.stringify({"token":"TON_SYNC_SECRET","ts":"{{Date.ISO8601}}","heart_rate":"{{FC actuelle}}","resting_hr":"{{FC au repos}}","hrv":"{{Variabilité FC}}","vo2max":"{{Aptitude cardio-vasculaire}}","steps":"{{Nombre de pas}}","distance_km":"{{Distance marche+course km}}","active_calories":"{{Calories actives}}","exercise_min":"{{Temps d'exercice min}}","stand_hours":"{{Heures debout}}","sleep_start":"{{Début sommeil}}","sleep_end":"{{Fin sommeil}}","sleep_deep":"{{Sommeil profond min}}","sleep_rem":"{{Sommeil paradoxal min}}","sleep_core":"{{Sommeil léger min}}","sleep_awake":"{{Éveillé min}}","spo2":"{{Saturation O₂ %}}","respiratory_rate":"{{Fréquence respiratoire}}","wrist_temp":"{{Température poignet écart}}","headphone_db":"{{Exposition casque dB}}","env_db":"{{Exposition environnement dB}}","weight":"{{Poids kg}}"},null,2);
+  const tb = document.getElementById('sync-log-tbody');
+  if (tb) { const logs=HD.cache.syncLogs||[]; tb.innerHTML=!logs.length?'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">Aucune synchronisation</td></tr>':logs.map(l=>`<tr><td>${new Date(l.synced_at).toLocaleString('fr-FR')}</td><td style="color:var(--text3)">${l.source}</td><td class="val">${l.records_count}</td><td><span class="badge ${l.status==='ok'?'badge-long':'badge-speed'}">${l.status}</span></td></tr>`).join(''); }
+}
+
+// ═══ SYNC MANUEL ═══
+async function healthSyncNow() {
+  const btn=document.getElementById('btn-sync-health'), dot=document.getElementById('sync-dot');
+  if (btn) btn.disabled=true;
+  if (dot) dot.className='sync-dot syncing';
+  try {
+    const res = await fetch(`${HEALTH_CONFIG.apiBase}/health-sync`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ token:HEALTH_CONFIG.syncSecret, ts:new Date().toISOString() }) });
+    const data = await res.json();
+    if (dot) dot.className='sync-dot '+(data.success?'ok':'err');
+    if (data.success) { HD.loaded=false; HD.cache={}; HD.charts={}; await initHealthPage(); showToast('Données synchronisées'); }
+    else showToast('Erreur sync: '+(data.error||'inconnue'), true);
+  } catch(e) { if (dot) dot.className='sync-dot err'; showToast('Erreur réseau', true); }
+  finally { if (btn) btn.disabled=false; }
+}
+
+// ═══ IMPORT XML ═══
+function healthDragOver(e) { e.preventDefault(); document.getElementById('import-zone').classList.add('drag-over'); }
+function healthDragLeave(e) { document.getElementById('import-zone').classList.remove('drag-over'); }
+function healthDrop(e) { e.preventDefault(); document.getElementById('import-zone').classList.remove('drag-over'); const f=e.dataTransfer?.files?.[0]; if (f) startHealthImport(f); }
+function healthFileSelected(e) { const f=e.target.files?.[0]; if (f) startHealthImport(f); }
+async function startHealthImport(file) {
+  const progress=document.getElementById('import-progress'), fill=document.getElementById('import-progress-fill'), text=document.getElementById('import-progress-text'), result=document.getElementById('import-result');
+  if (progress) progress.classList.add('show');
+  if (fill) fill.style.width='15%';
+  if (text) text.textContent=`Envoi de ${(file.size/1024/1024).toFixed(1)} Mo...`;
+  if (result) result.style.display='none';
+  const form=new FormData(); form.append('file',file);
+  let p=15; const interval=setInterval(()=>{ p=Math.min(p+3,85); if(fill) fill.style.width=p+'%'; },500);
+  try {
+    const res=await fetch(`${HEALTH_CONFIG.apiBase}/health-import`,{method:'POST',headers:{'Authorization':`Bearer ${HEALTH_CONFIG.importSecret}`},body:form});
+    clearInterval(interval); if(fill) fill.style.width='100%';
+    const data=await res.json();
+    if (data.success) {
+      if (text) text.textContent='Import terminé !';
+      if (result) { result.style.display='block'; result.style.background='var(--green-dim)'; result.style.color='var(--green)'; result.style.border='1px solid var(--green)'; result.innerHTML=`✓ ${data.imported?.toLocaleString('fr-FR')} enregistrements importés`; }
+      setTimeout(()=>{ HD.loaded=false; HD.cache={}; HD.charts={}; initHealthPage(); },1500);
+    } else throw new Error(data.error||'Erreur import');
+  } catch(err) { clearInterval(interval); if(fill) fill.style.width='0%'; if(text) text.textContent='Erreur'; if(result){result.style.display='block';result.style.background='rgba(255,92,92,0.1)';result.style.color='var(--red)';result.style.border='1px solid var(--red)';result.textContent='✗ '+err.message;} }
+}
+
+function copyApiUrl() { const el=document.getElementById('api-url-display'); if(el){navigator.clipboard.writeText(el.value);showToast('URL copiée');} }
+function copyShortcutTemplate() { const el=document.getElementById('shortcut-template'); if(el){navigator.clipboard.writeText(el.textContent);showToast('Template copié');} }
+
+// ═══ AUTO-SYNC HORAIRE ═══
+let healthSyncInterval=null;
+function startHealthAutoSync() {
+  if (healthSyncInterval) return;
+  healthSyncInterval=setInterval(()=>{ if (document.getElementById('page-sante')?.classList.contains('active')) healthSyncNow(); },3600000);
+}
+
+// ═══ HELPERS CHARTS ═══
+function hDestroyChart(id) { if (HD.charts[id]) { HD.charts[id].destroy(); delete HD.charts[id]; } }
+
+function hRenderLineChart(canvasId, data, getLabel, getValue, color, label, opts={}) {
+  if (!data?.length) return;
+  hDestroyChart(canvasId);
+  const ctx=document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  HD.charts[canvasId]=new Chart(ctx,{type:'line',data:{labels:data.map(getLabel),datasets:[{label,data:data.map(getValue),borderColor:color,backgroundColor:opts.fill?hHex2rgba(color,0.1):'transparent',borderWidth:2,fill:opts.fill||false,tension:opts.tension??0.2,pointRadius:data.length>30?0:3,pointHoverRadius:5,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'rgba(138,154,142,0.7)',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.04)'}},y:{min:opts.min,max:opts.max,ticks:{color:'rgba(138,154,142,0.7)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}}});
+}
+
+function hRenderBarChart(canvasId, data, getLabel, getValue, color, label) {
+  if (!data?.length) return;
+  hDestroyChart(canvasId);
+  const ctx=document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  HD.charts[canvasId]=new Chart(ctx,{type:'bar',data:{labels:data.map(getLabel),datasets:[{label,data:data.map(getValue),backgroundColor:color,borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'rgba(138,154,142,0.7)',font:{size:10},maxRotation:0,autoSkip:true,maxTicksLimit:10},grid:{display:false}},y:{ticks:{color:'rgba(138,154,142,0.7)',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}}});
+}
+
+// ═══ RING SVG ═══
+function hRenderRing(containerId, value, min, max, title, zone, color) {
+  const el=document.getElementById(containerId); if (!el||value==null) return;
+  const pct=Math.min(Math.max((value-min)/(max-min),0),1),c=2*Math.PI*36,dash=c*pct;
+  el.innerHTML=`<div class="score-ring-wrap"><div class="score-ring"><svg width="80" height="80" viewBox="0 0 80 80"><circle cx="40" cy="40" r="36" style="fill:none;stroke:var(--bg4);stroke-width:7"/><circle cx="40" cy="40" r="36" style="fill:none;stroke:${color};stroke-width:7;stroke-linecap:round;stroke-dasharray:${c};stroke-dashoffset:${c-dash};transform:rotate(-90deg);transform-origin:40px 40px;transition:stroke-dashoffset 0.8s"/></svg><div class="score-ring-label">${typeof value==='number'?value.toFixed(value<10?1:0):value}</div></div><div class="score-ring-info"><div class="score-ring-title">${title}</div><div class="score-ring-sub">${zone.desc}</div><span class="score-ring-zone" style="background:${zone.color}22;color:${zone.color}">${zone.label}</span></div></div>`;
+}
+
+// ═══ MINI DISPLAYS ═══
+function hRenderStepsToday(today) { const el=document.getElementById('steps-today-display'); if(!el) return; const s=today?.step_count||0,pct=Math.min(s/10000*100,100); el.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--green);">${s.toLocaleString('fr-FR')}</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">${today?.distance_km?.toFixed(2)??'—'} km parcourus</div><div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div><div style="font-size:11px;color:var(--text3);margin-top:4px;">${Math.round(pct)}% de l'objectif 10k</div>`; }
+function hRenderCaloriesToday(today) { const el=document.getElementById('calories-today-display'); if(!el) return; const cal=today?.active_calories||0; el.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--amber);">${cal}</div><div style="font-size:12px;color:var(--text3);margin-top:2px;">kcal actives</div><div class="progress-wrap"><div class="progress-fill" style="width:${Math.min(cal/500*100,100)}%;background:var(--amber);"></div></div>`; }
+function hRenderHearingToday(h) { const el=document.getElementById('hearing-today-display'); if(!el) return; if(!h){el.innerHTML='<div style="color:var(--text3);font-size:12px;">Pas de données</div>';return;} const db=h.headphone_exposure_db||h.env_exposure_db||0,color=db<70?'var(--green)':db<85?'var(--amber)':'var(--red)',status=db<70?'Sûr':db<85?'Attention':'Dangereux'; el.innerHTML=`<div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:${color};">${db.toFixed(1)} dB</div><div style="font-size:12px;color:${color};margin-top:2px;">${status}</div><div style="font-size:11px;color:var(--text3);margin-top:4px;">${h.audio_exposure_events||0} événements forts</div>`; }
+function hRenderSleepOverview(sleep) { const el=document.getElementById('sleep-overview-content'); if(!el) return; if(!sleep){el.innerHTML='<div class="empty"><div class="empty-icon">🌙</div><div class="empty-msg">Pas de données de sommeil</div></div>';return;} const total=sleep.duration_min||1,pD=Math.round((sleep.deep_min||0)/total*100),pR=Math.round((sleep.rem_min||0)/total*100),pC=Math.round((sleep.core_min||0)/total*100),pA=Math.round((sleep.awake_min||0)/total*100); el.innerHTML=`<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px;"><span style="font-family:'JetBrains Mono',monospace;font-size:32px;font-weight:700;color:var(--sleep)">${hFmtMin(total)}</span><span style="font-size:12px;color:var(--text3);">${hFmtTime(sleep.sleep_start)} → ${hFmtTime(sleep.sleep_end)}</span><span style="margin-left:auto;font-size:13px;font-weight:600;color:${sleep.efficiency_pct>=85?'var(--green)':sleep.efficiency_pct>=70?'var(--amber)':'var(--red)'}">${sleep.efficiency_pct?.toFixed(0)??'—'}% efficacité</span></div><div class="sleep-bar-wrap"><div class="sleep-segment sleep-seg-deep" style="width:${pD}%"></div><div class="sleep-segment sleep-seg-rem" style="width:${pR}%"></div><div class="sleep-segment sleep-seg-core" style="width:${pC}%"></div><div class="sleep-segment sleep-seg-awake" style="width:${pA}%"></div></div><div class="sleep-legend" style="margin-top:6px;">${[['Profond','sleep-seg-deep','#7B68EE'],['REM','sleep-seg-rem','#A78BFA'],['Léger','sleep-seg-core','#C4B5FD'],['Éveillé','sleep-seg-awake','var(--text3)']].map(([l,c,col])=>`<div class="sleep-legend-item"><div class="sleep-legend-dot ${c}"></div>${l}</div>`).join('')}</div>`; }
+
+// ═══ ZONES & INTERPRÉTATIONS ═══
+function hVo2Zone(v) { if(v>=55)return{label:'Excellent',color:'#00E87A',desc:'Niveau athlète — top 5% de la population'}; if(v>=45)return{label:'Supérieur',color:'#5BA4FF',desc:'Excellente condition cardiovasculaire'}; if(v>=38)return{label:'Bon',color:'#A78BFA',desc:'Au-dessus de la moyenne pour ton âge'}; if(v>=30)return{label:'Moyen',color:'#FFB347',desc:'Dans la moyenne — il y a de la marge'}; return{label:'Faible',color:'#FF5C5C',desc:'Cardio à travailler'}; }
+function hVo2Interp(v) { if(v>=55)return'<strong style="color:var(--green)">niveau athlète</strong> — équivalent coureur &lt; 45min au 10km'; if(v>=48)return'<strong style="color:var(--blue)">très bon niveau</strong> — coureur régulier 45-50min au 10km'; if(v>=42)return'<strong style="color:#A78BFA">bon niveau</strong> — forme physique au-dessus de la moyenne'; if(v>=35)return'<strong style="color:var(--amber)">niveau moyen</strong> — cardio régulier recommandé'; return'<strong style="color:var(--red)">niveau à améliorer</strong> — cardio 3×/semaine min'; }
+function hHrvZone(v) { if(v>=70)return{label:'Excellent',color:'#00E87A',desc:'Récupération optimale · prêt pour une séance intense'}; if(v>=50)return{label:'Bon',color:'#5BA4FF',desc:'Bonne récupération'}; if(v>=35)return{label:'Moyen',color:'#FFB347',desc:'Récupération partielle · éviter l\'intensité'}; return{label:'Faible',color:'#FF5C5C',desc:'Repos recommandé'}; }
+
+// ═══ UTILITAIRES SANTÉ ═══
+function hFmtMin(m) { if(!m&&m!==0)return'—'; const h=Math.floor(m/60),mn=Math.round(m%60); return h>0?`${h}h${mn.toString().padStart(2,'0')}`:`${mn}m`; }
+function hFmtTime(iso) { if(!iso)return'—'; return new Date(iso).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function hFmtDate(str) { if(!str)return'—'; return new Date(str+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}); }
+function hHex2rgba(color,alpha) { if(color.startsWith('#')){const r=parseInt(color.slice(1,3),16),g=parseInt(color.slice(3,5),16),b=parseInt(color.slice(5,7),16);return`rgba(${r},${g},${b},${alpha})`;} return color; }
 </script>
 </body>
 </html>
