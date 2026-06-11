@@ -2138,6 +2138,7 @@ function _renderStrTodayWithLogs(logs) {
   const sched = WEEKLY_SCHEDULE[dayKey];
   const todayDate = new Date().toISOString().split('T')[0];
   const todayLog = logs.find(l => l.date === todayDate);
+  const todayLogged = !!todayLog;
 
   // Update subtitle
   const dayFr = strDayFr(new Date().getDay());
