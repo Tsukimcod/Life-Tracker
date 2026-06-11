@@ -1774,6 +1774,32 @@ const SDB = {
   set: (k,v) => { localStorage.setItem('str_'+k, JSON.stringify(v)); }
 };
 
+// ═══════════════════════════════════════════════════════
+//  CONFIG SUPABASE (doit être avant tout code qui utilise SB)
+// ═══════════════════════════════════════════════════════
+const HEALTH_CONFIG = {
+  supabaseUrl:  'https://qjkkdrzhlmufqsyftsvj.supabase.co',
+  supabaseKey:  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqa2tkcnpobG11ZnFzeWZ0c3ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwODI0MTEsImV4cCI6MjA5NjY1ODQxMX0.V8zbbY-DZfBkmqbTCpsZqhg-p109fk1762I7jkwRoTE',
+  importSecret: 'Tsk608026++',
+  syncSecret:   '608040',
+  apiBase:      '/api'
+};
+
+const SB = {
+  async query(table, opts = {}) {
+    let url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?`;
+    if (opts.select) url += `select=${encodeURIComponent(opts.select)}&`;
+    if (opts.filter) url += `${opts.filter}&`;
+    if (opts.order)  url += `order=${opts.order}&`;
+    if (opts.limit)  url += `limit=${opts.limit}&`;
+    const res = await fetch(url, {
+      headers: { 'apikey': HEALTH_CONFIG.supabaseKey, 'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}` }
+    });
+    if (!res.ok) throw new Error(`Supabase ${res.status}`);
+    return res.json();
+  }
+};
+
 // ── Cache mémoire des logs (chargés depuis Supabase)
 let _strLogs = null;
 let _strLogsLoading = false;
@@ -2138,7 +2164,6 @@ function _renderStrTodayWithLogs(logs) {
   const sched = WEEKLY_SCHEDULE[dayKey];
   const todayDate = new Date().toISOString().split('T')[0];
   const todayLog = logs.find(l => l.date === todayDate);
-  const todayLogged = !!todayLog;
 
   // Update subtitle
   const dayFr = strDayFr(new Date().getDay());
@@ -3360,35 +3385,7 @@ loadProgFromDB().then(prog => {
 document.getElementById('rec-date').value = today();
 renderDashboard();
 
-// ═══════════════════════════════════════════════════════
-//  PAGE SANTÉ — CONFIG
-//  ⚠️  À remplir avec tes vraies valeurs après le déploiement Vercel + Supabase
-// ═══════════════════════════════════════════════════════
-const HEALTH_CONFIG = {
-  supabaseUrl:  'https://qjkkdrzhlmufqsyftsvj.supabase.co',
-  supabaseKey:  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqa2tkcnpobG11ZnFzeWZ0c3ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwODI0MTEsImV4cCI6MjA5NjY1ODQxMX0.V8zbbY-DZfBkmqbTCpsZqhg-p109fk1762I7jkwRoTE',
-  importSecret: 'Tsk608026++',
-  syncSecret:   '608040',
-  apiBase:      '/api'
-};
-
-// ── Client Supabase léger (pas besoin du SDK complet)
-const SB = {
-  async query(table, opts = {}) {
-    let url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?`;
-    if (opts.select) url += `select=${encodeURIComponent(opts.select)}&`;
-    if (opts.filter) url += `${opts.filter}&`;
-    if (opts.order)  url += `order=${opts.order}&`;
-    if (opts.limit)  url += `limit=${opts.limit}&`;
-    const res = await fetch(url, {
-      headers: { 'apikey': HEALTH_CONFIG.supabaseKey, 'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}` }
-    });
-    if (!res.ok) throw new Error(`Supabase ${res.status}`);
-    return res.json();
-  }
-};
-
-// ── État global
+// ── État global santé
 const HD = { loaded: false, charts: {}, cache: {}, activeHealthTab: 'overview' };
 
 // ── Navigation tabs santé
