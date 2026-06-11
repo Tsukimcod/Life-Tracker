@@ -1774,32 +1774,6 @@ const SDB = {
   set: (k,v) => { localStorage.setItem('str_'+k, JSON.stringify(v)); }
 };
 
-// ═══════════════════════════════════════════════════════
-//  CONFIG SUPABASE (doit être avant tout code qui utilise SB)
-// ═══════════════════════════════════════════════════════
-const HEALTH_CONFIG = {
-  supabaseUrl:  'https://qjkkdrzhlmufqsyftsvj.supabase.co',
-  supabaseKey:  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqa2tkcnpobG11ZnFzeWZ0c3ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwODI0MTEsImV4cCI6MjA5NjY1ODQxMX0.V8zbbY-DZfBkmqbTCpsZqhg-p109fk1762I7jkwRoTE',
-  importSecret: 'Tsk608026++',
-  syncSecret:   '608040',
-  apiBase:      '/api'
-};
-
-const SB = {
-  async query(table, opts = {}) {
-    let url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?`;
-    if (opts.select) url += `select=${encodeURIComponent(opts.select)}&`;
-    if (opts.filter) url += `${opts.filter}&`;
-    if (opts.order)  url += `order=${opts.order}&`;
-    if (opts.limit)  url += `limit=${opts.limit}&`;
-    const res = await fetch(url, {
-      headers: { 'apikey': HEALTH_CONFIG.supabaseKey, 'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}` }
-    });
-    if (!res.ok) throw new Error(`Supabase ${res.status}`);
-    return res.json();
-  }
-};
-
 // ── Cache mémoire des logs (chargés depuis Supabase)
 let _strLogs = null;
 let _strLogsLoading = false;
@@ -2042,36 +2016,36 @@ const PROG_DEFAULT = {
   chaise:  { sets:[30,30], unit:'s' },
 };
 
-// Charger le programme depuis Supabase (avec cache)
+// Charger le programme (localStorage en priorité, Supabase en arrière-plan)
 async function loadProgFromDB() {
-  if (_strProg) return _strProg;
+  // 1. Charger immédiatement depuis localStorage (sync, instantané)
+  const local = SDB.get('prog', null);
+  _strProg = local || { ...PROG_DEFAULT };
+
+  // 2. Essayer de syncer avec Supabase en arrière-plan (sans bloquer le rendu)
   try {
     const rows = await SB.query('strength_program', { select: 'exercise_key,sets,unit', limit: 20 });
-    if (!rows?.length) {
-      // Pas encore de données — seed depuis localStorage ou défaut
-      const local = SDB.get('prog', null);
-      _strProg = local || { ...PROG_DEFAULT };
-      await saveProgToDB(_strProg); // seed dans Supabase
-      return _strProg;
+    if (rows?.length) {
+      const prog = {};
+      rows.forEach(r => {
+        prog[r.exercise_key] = { sets: r.sets, ...(r.unit && r.unit !== 'reps' ? { unit: r.unit } : {}) };
+      });
+      _strProg = prog;
+      SDB.set('prog', prog); // mettre à jour localStorage
+    } else if (!local) {
+      // Rien en local ni Supabase → seed
+      await saveProgToDB({ ...PROG_DEFAULT });
     }
-    const prog = {};
-    rows.forEach(r => {
-      prog[r.exercise_key] = { sets: r.sets, ...(r.unit && r.unit !== 'reps' ? { unit: r.unit } : {}) };
-    });
-    _strProg = prog;
-    return prog;
   } catch(e) {
-    console.warn('[str] loadProg error, fallback local:', e.message);
-    _strProg = SDB.get('prog', { ...PROG_DEFAULT });
-    return _strProg;
+    console.warn('[str] loadProg Supabase error (using local):', e.message);
   }
+  return _strProg;
 }
 
-// Sauvegarder le programme dans Supabase
+// Sauvegarder le programme (localStorage immédiat + Supabase async)
 async function saveProgToDB(prog) {
   _strProg = prog;
-  // Backup local aussi
-  SDB.set('prog', prog);
+  SDB.set('prog', prog); // localStorage immédiat
   try {
     const rows = Object.entries(prog).map(([key, val]) => ({
       exercise_key: key,
@@ -2090,19 +2064,22 @@ async function saveProgToDB(prog) {
       body: JSON.stringify(rows)
     });
   } catch(e) {
-    console.warn('[str] saveProg error:', e.message);
+    console.warn('[str] saveProg Supabase error:', e.message);
   }
 }
 
-// Wrapper sync pour compatibilité (utilise le cache)
+// Sync (retourne toujours le cache local immédiatement)
 function getCurrentProg() {
-  // Retourne le cache si dispo, sinon le local
-  return _strProg || SDB.get('prog', { ...PROG_DEFAULT });
+  if (!_strProg) {
+    _strProg = SDB.get('prog', { ...PROG_DEFAULT });
+  }
+  return _strProg;
 }
 
 function saveProg(p) {
-  // Lance la sauvegarde async + met à jour le cache immédiatement
-  saveProgToDB(p);
+  _strProg = p;
+  SDB.set('prog', p); // immédiat
+  saveProgToDB(p);    // async Supabase
 }
 
 // ── Constance score ──
@@ -2154,7 +2131,8 @@ function strShowTab(id) {
 
 // ═══ RENDER TODAY ═══
 function renderStrToday() {
-  Promise.all([strLoadLogs(), loadProgFromDB()]).then(([logs]) => _renderStrTodayWithLogs(logs));
+  // getCurrentProg() est synchrone (localStorage), strLoadLogs() est async
+  strLoadLogs().then(logs => _renderStrTodayWithLogs(logs));
 }
 
 function _renderStrTodayWithLogs(logs) {
@@ -3178,7 +3156,7 @@ function _renderStrWeekWithLogs(logs) {
 
 // ═══ RENDER PROGRESS ═══
 function renderStrProgress() {
-  Promise.all([strLoadLogs(true), loadProgFromDB()]).then(([logs]) => {
+  strLoadLogs(true).then(logs => {
     const prog = getCurrentProg();
 
   if (logs.length < 2) {
@@ -3385,7 +3363,35 @@ loadProgFromDB().then(prog => {
 document.getElementById('rec-date').value = today();
 renderDashboard();
 
-// ── État global santé
+// ═══════════════════════════════════════════════════════
+//  PAGE SANTÉ — CONFIG
+//  ⚠️  À remplir avec tes vraies valeurs après le déploiement Vercel + Supabase
+// ═══════════════════════════════════════════════════════
+const HEALTH_CONFIG = {
+  supabaseUrl:  'https://qjkkdrzhlmufqsyftsvj.supabase.co',
+  supabaseKey:  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqa2tkcnpobG11ZnFzeWZ0c3ZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwODI0MTEsImV4cCI6MjA5NjY1ODQxMX0.V8zbbY-DZfBkmqbTCpsZqhg-p109fk1762I7jkwRoTE',
+  importSecret: 'Tsk608026++',
+  syncSecret:   '608040',
+  apiBase:      '/api'
+};
+
+// ── Client Supabase léger (pas besoin du SDK complet)
+const SB = {
+  async query(table, opts = {}) {
+    let url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?`;
+    if (opts.select) url += `select=${encodeURIComponent(opts.select)}&`;
+    if (opts.filter) url += `${opts.filter}&`;
+    if (opts.order)  url += `order=${opts.order}&`;
+    if (opts.limit)  url += `limit=${opts.limit}&`;
+    const res = await fetch(url, {
+      headers: { 'apikey': HEALTH_CONFIG.supabaseKey, 'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}` }
+    });
+    if (!res.ok) throw new Error(`Supabase ${res.status}`);
+    return res.json();
+  }
+};
+
+// ── État global
 const HD = { loaded: false, charts: {}, cache: {}, activeHealthTab: 'overview' };
 
 // ── Navigation tabs santé
