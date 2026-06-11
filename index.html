@@ -1857,7 +1857,7 @@ function renderRecords() {
       <td class="mono" style="color:var(--text2);">${paceStr}</td>
       <td>${r.date ? formatDate(r.date) : '—'}</td>
       <td style="color:var(--text3);">${r.ctx || '—'}</td>
-      <td><button class="btn-danger" onclick="deleteRecord('${r.id}')">✕</button></td>
+      <td><button class="btn-danger" onclick="deleteRecord('${r.id}')"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L8 8M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></td>
     </tr>`;
   }).join('');
 }
@@ -1883,7 +1883,7 @@ function renderHistory() {
       <td class="mono">${r.hr ? r.hr+' bpm' : '—'}</td>
       <td>${r.rpe ? r.rpe+'/10' : '—'}</td>
       <td style="color:var(--text3);font-size:12px;">${r.note || '—'}</td>
-      <td><button class="btn-danger" onclick="deleteRun('${r.id}')">✕</button></td>
+      <td><button class="btn-danger" onclick="deleteRun('${r.id}')"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L8 8M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></td>
     </tr>`;
   }).join('');
 }
@@ -2373,8 +2373,8 @@ function renderVolumeSummary() {
 // ═══ END-OF-WEEK FEELING PROMPT ═══
 // Show on Friday, Saturday, Sunday
 function isEndOfWeek() {
-  const dow = new Date().getDay(); // 5=Fri, 6=Sat, 0=Sun
-  return dow === 5 || dow === 6 || dow === 0;
+  const dow = new Date().getDay();
+  return dow === 0; // Dimanche uniquement
 }
 
 function renderEowCard() {
@@ -2397,14 +2397,26 @@ function renderEowCard() {
 
   card.style.display = '';
   document.getElementById('eow-content').innerHTML = `
-    <div class="eow-title">🎯 Bilan de fin de semaine</div>
-    <div class="eow-sub">Comment s'est passé l'entraînement cette semaine ?</div>
-    <div class="feeling-btns">
-      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','too_easy')">😎 Trop facile<br><span style="font-size:10px;color:var(--text3);">J'aurais pu faire bien plus</span></button>
-      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','easy')">💪 Facile<br><span style="font-size:10px;color:var(--text3);">Encore de la marge</span></button>
-      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','good')">🔥 Parfait<br><span style="font-size:10px;color:var(--text3);">Bien challengé</span></button>
-      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','hard')">😤 Dur<br><span style="font-size:10px;color:var(--text3);">Limite mais tenu</span></button>
-      <button class="feeling-btn" onclick="selectFeeling('${weekKey}','too_hard')">🥵 Trop dur<br><span style="font-size:10px;color:var(--text3);">Forme dégradée</span></button>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;">Bilan de semaine</div>
+      <div style="font-size:11px;color:var(--text3);">Comment s'est passé l'entraînement cette semaine ?</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      ${[
+        { val:'too_easy', score:1, label:'Trop facile',  sub:'Bien en dessous' },
+        { val:'easy',     score:2, label:'Facile',       sub:'Encore de la marge' },
+        { val:'good',     score:3, label:'Parfait',      sub:'Bien challengé' },
+        { val:'hard',     score:4, label:'Difficile',    sub:'Limite mais tenu' },
+        { val:'too_hard', score:5, label:'Trop dur',     sub:'Forme dégradée' },
+      ].map(f => `
+        <button onclick="selectFeeling('${weekKey}','${f.val}')"
+          style="flex:1;padding:10px 6px;border-radius:8px;border:1px solid var(--border2);
+            background:var(--bg3);cursor:pointer;text-align:center;transition:all 0.15s;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;
+            color:${['#5a7a6e','#F5C400','#00E87A','#FF8C42','#FF5C5C'][f.score-1]};line-height:1;margin-bottom:6px;">${f.score}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;">${f.label}</div>
+          <div style="font-size:9px;color:var(--text3);">${f.sub}</div>
+        </button>`).join('')}
     </div>`;
 }
 
@@ -3294,7 +3306,7 @@ function renderStrHistory() {
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         ${l.rpe ? `<span style="font-size:12px;font-weight:600;color:${l.rpe<=5?'var(--blue)':l.rpe<=7?'var(--green)':l.rpe<=8.5?'var(--amber)':'var(--red)'};">${l.rpe}/10</span>` : ''}
-        <button class="btn-danger" onclick="deleteStrLog('${l.id}')">✕</button>
+        <button class="btn-danger" onclick="deleteStrLog('${l.id}')"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L8 8M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
       </div>
     </div>`;
   }).join('');
@@ -3627,7 +3639,7 @@ async function startHealthImport(file) {
       if (result) { result.style.display='block'; result.style.background='var(--green-dim)'; result.style.color='var(--green)'; result.style.border='1px solid var(--green)'; result.innerHTML=`✓ ${data.imported?.toLocaleString('fr-FR')} enregistrements importés`; }
       setTimeout(()=>{ HD.loaded=false; HD.cache={}; HD.charts={}; initHealthPage(); },1500);
     } else throw new Error(data.error||'Erreur import');
-  } catch(err) { clearInterval(interval); if(fill) fill.style.width='0%'; if(text) text.textContent='Erreur'; if(result){result.style.display='block';result.style.background='rgba(255,92,92,0.1)';result.style.color='var(--red)';result.style.border='1px solid var(--red)';result.textContent='✗ '+err.message;} }
+  } catch(err) { clearInterval(interval); if(fill) fill.style.width='0%'; if(text) text.textContent='Erreur'; if(result){result.style.display='block';result.style.background='rgba(255,92,92,0.1)';result.style.color='var(--red)';result.style.border='1px solid var(--red)';result.textContent='Erreur : '+err.message;} }
 }
 
 function copyApiUrl() { const el=document.getElementById('api-url-display'); if(el){navigator.clipboard.writeText(el.value);showToast('URL copiée');} }
@@ -3781,7 +3793,7 @@ async function toggleTask(id) {
   const gv = document.getElementById('score-goals-val'); if(gv) gv.textContent = gs;
   const gc = document.getElementById('score-goals-comment'); if(gc) gc.textContent = goalsComment(gs,done,total);
   const gdd = document.getElementById('score-goals-detail');
-  if(gdd) gdd.innerHTML = gd.slice(0,6).map(d=>`<span class="score-pill" style="background:${d.ok?'rgba(0,232,122,0.12)':'rgba(255,92,92,0.1)'};color:${d.ok?'var(--green)':'var(--red)'}"> ${d.ok?'✓':'✗'} ${d.label}</span>`).join('');
+  if(gdd) gdd.innerHTML = gd.slice(0,6).map(d=>`<span class="score-pill" style="background:${d.ok?'rgba(0,232,122,0.12)':'rgba(255,92,92,0.1)'};color:${d.ok?'var(--green)':'var(--red)'}"><svg width="9" height="9" viewBox="0 0 9 9" fill="none" style="vertical-align:middle;margin-right:2px;">${d.ok?'<path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>':'<path d="M2 2L7 7M7 2L2 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'}</svg>${d.label}</span>`).join('');
 }
 
 async function deleteTask(id) {
@@ -3874,12 +3886,12 @@ async function renderHomePage() {
   const {score:gs,done,total,details:gd}=calcGoalsScore(tasks,state);
   animateRing('score-goals-ring',gs,'#00E87A'); animateCounter('score-goals-val',gs);
   const gc=document.getElementById('score-goals-comment'); if(gc) gc.textContent=goalsComment(gs,done,total);
-  const gdd=document.getElementById('score-goals-detail'); if(gdd) gdd.innerHTML=gd.slice(0,6).map(d=>`<span class="score-pill" style="background:${d.ok?'rgba(0,232,122,0.12)':'rgba(255,92,92,0.1)'};color:${d.ok?'var(--green)':'var(--red)'}"> ${d.ok?'✓':'✗'} ${d.label}</span>`).join('');
+  const gdd=document.getElementById('score-goals-detail'); if(gdd) gdd.innerHTML=gd.slice(0,6).map(d=>`<span class="score-pill" style="background:${d.ok?'rgba(0,232,122,0.12)':'rgba(255,92,92,0.1)'};color:${d.ok?'var(--green)':'var(--red)'}"><svg width="9" height="9" viewBox="0 0 9 9" fill="none" style="vertical-align:middle;margin-right:2px;">${d.ok?'<path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>':'<path d="M2 2L7 7M7 2L2 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'}</svg>${d.label}</span>`).join('');
   const health=await fetchTodayHealth();
   const {score:hs,details:hd}=calcHealthScore(health);
   animateRing('score-health-ring',hs,'#FF6B8A'); animateCounter('score-health-val',hs);
   const hc=document.getElementById('score-health-comment'); if(hc) hc.textContent=healthComment(hs);
-  const hdd=document.getElementById('score-health-detail'); if(hdd) hdd.innerHTML=hd.map(d=>{const c=d.ok===null?'var(--text3)':d.ok?'var(--green)':'var(--red)';const bg=d.ok===null?'var(--bg3)':d.ok?'rgba(0,232,122,0.12)':'rgba(255,92,92,0.1)';return`<span class="score-pill" style="background:${bg};color:${c}">${d.ok===null?'·':d.ok?'✓':'✗'} ${d.label}</span>`;}).join('');
+  const hdd=document.getElementById('score-health-detail'); if(hdd) hdd.innerHTML=hd.map(d=>{const c=d.ok===null?'var(--text3)':d.ok?'var(--green)':'var(--red)';const bg=d.ok===null?'var(--bg3)':d.ok?'rgba(0,232,122,0.12)':'rgba(255,92,92,0.1)';return`<span class="score-pill" style="background:${bg};color:${c}"><svg width="9" height="9" viewBox="0 0 9 9" fill="none" style="vertical-align:middle;margin-right:2px;">${d.ok===null?'<circle cx="4.5" cy="4.5" r="1.5" fill="currentColor"/>':d.ok?'<path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>':'<path d="M2 2L7 7M7 2L2 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'}</svg>${d.label}</span>`;}).join('');
   renderHealthStrip(health);
 }
 
@@ -3888,11 +3900,11 @@ function renderChecklistUI(tasks, state) {
   const active=tasks.filter(isTaskActiveToday);
   if(!active.length){el.innerHTML=`<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">Aucune tâche — clique sur "+ Ajouter"</div>`;return;}
   el.innerHTML=active.map(t=>`<div class="checklist-item ${state[t.id]?'done':''}" id="ci-${t.id}">
-    <div class="check-box" onclick="toggleTask('${t.id}')">✓</div>
+    <div class="check-box" onclick="toggleTask('${t.id}')"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5L4.5 8L9 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <span class="check-icon">${t.icon}</span>
     <span class="check-label" onclick="toggleTask('${t.id}')">${t.label}</span>
     <span style="font-size:10px;color:var(--text3);margin-right:4px;">${t.recur==='daily'?'':t.recur==='weekdays'?'sem.':t.recur==='weekends'?'w-e':'×1'}</span>
-    <button class="check-delete" onclick="deleteTask('${t.id}')" title="Supprimer">✕</button>
+    <button class="check-delete" onclick="deleteTask('${t.id}')" title="Supprimer"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L8 8M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
   </div>`).join('');
 }
 
