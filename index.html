@@ -581,6 +581,26 @@ select.form-control option { background: var(--bg3); }
 .hs-val   { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text); }
 .hs-label { font-size: 10px; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
 .score-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 8px; font-size: 11px; font-weight: 500; }
+
+/* Perfect days banner */
+.perfect-banner {
+  display: flex; align-items: center; gap: 16px;
+  background: linear-gradient(135deg, rgba(0,232,122,0.08) 0%, rgba(0,232,122,0.03) 100%);
+  border: 1px solid rgba(0,232,122,0.25); border-radius: var(--radius);
+  padding: 14px 20px;
+}
+.perfect-count {
+  font-family: 'JetBrains Mono', monospace; font-size: 38px; font-weight: 700;
+  color: var(--green); line-height: 1; flex-shrink: 0;
+}
+.perfect-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.perfect-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.perfect-streak-mini { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.perfect-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Chart range buttons */
+.hist-range-btn { font-size: 11px !important; padding: 4px 10px !important; }
+.hist-range-btn.active { background: var(--green-dim) !important; color: var(--green) !important; border-color: var(--green) !important; }
 .emoji-opt:hover { border-color: var(--green) !important; }
 .emoji-opt.selected { border-color: var(--green) !important; background: var(--green-dim); }
 
@@ -731,6 +751,9 @@ select.form-control option { background: var(--bg3); }
   </div>
   <div class="content">
 
+    <!-- ── PERFECT DAYS COUNTER ── -->
+    <div id="perfect-days-banner" style="margin-bottom:16px;"></div>
+
     <!-- ── SCORES ── -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
       <!-- Score Santé -->
@@ -790,6 +813,28 @@ select.form-control option { background: var(--bg3); }
     <div class="card">
       <div class="card-title">🏃 Sport aujourd'hui</div>
       <div id="home-sport-strip"></div>
+    </div>
+
+    <!-- ── HISTORIQUE SCORES ── -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">📈 Évolution des scores</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost hist-range-btn active" data-days="7" onclick="setHistRange(7)">7j</button>
+          <button class="btn btn-ghost hist-range-btn" data-days="30" onclick="setHistRange(30)">30j</button>
+          <button class="btn btn-ghost hist-range-btn" data-days="90" onclick="setHistRange(90)">90j</button>
+        </div>
+      </div>
+      <div id="scores-chart-container">
+        <canvas id="chart-goals" height="80"></canvas>
+        <div style="display:flex;align-items:center;gap:6px;margin:6px 0 10px;font-size:11px;color:var(--text3);">
+          <span style="width:12px;height:3px;background:#00E87A;display:inline-block;border-radius:2px;"></span> Objectifs
+        </div>
+        <canvas id="chart-health" height="80"></canvas>
+        <div style="display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:11px;color:var(--text3);">
+          <span style="width:12px;height:3px;background:#FF6B8A;display:inline-block;border-radius:2px;"></span> Santé
+        </div>
+      </div>
     </div>
 
   </div>
@@ -1274,25 +1319,115 @@ select.form-control option { background: var(--bg3); }
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  DATA LAYER  (localStorage)
+//  DATA LAYER  — Supabase (avec cache local fallback)
 // ═══════════════════════════════════════════════════════
-const DB = {
-  get: (k, def=[]) => { try { return JSON.parse(localStorage.getItem('lt_'+k)) ?? def; } catch { return def; } },
-  set: (k,v) => { localStorage.setItem('lt_'+k, JSON.stringify(v)); }
+
+// ── Client Supabase étendu avec upsert/insert/delete ──
+const SBX = {
+  _headers: () => ({
+    'apikey':        HEALTH_CONFIG.supabaseKey,
+    'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}`,
+    'Content-Type':  'application/json',
+    'Prefer':        'return=representation'
+  }),
+  async get(table, opts = {}) {
+    let url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?`;
+    if (opts.select) url += `select=${encodeURIComponent(opts.select)}&`;
+    if (opts.filter) url += `${opts.filter}&`;
+    if (opts.order)  url += `order=${opts.order}&`;
+    if (opts.limit)  url += `limit=${opts.limit}&`;
+    const r = await fetch(url, { headers: SBX._headers() });
+    if (!r.ok) throw new Error(`SB GET ${table} ${r.status}`);
+    return r.json();
+  },
+  async upsert(table, data) {
+    const url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { ...SBX._headers(), 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify(Array.isArray(data) ? data : [data])
+    });
+    if (!r.ok) { const t = await r.text(); throw new Error(`SB UPSERT ${table}: ${t}`); }
+    return r.json();
+  },
+  async delete(table, filter) {
+    const url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?${filter}`;
+    const r = await fetch(url, { method: 'DELETE', headers: SBX._headers() });
+    if (!r.ok) throw new Error(`SB DELETE ${table} ${r.status}`);
+  }
 };
 
-// Seed Strava PRs on first load
-(function seedPRs() {
-  const existing = DB.get('records');
-  if (existing.length) return;
+// ── DB running — Supabase (running_sessions + running_records)
+// Garde un cache mémoire pour les lectures synchrones
+const DB = {
+  _cache: { runs: null, records: null },
+  get: (k, def = []) => {
+    // Retourne le cache si disponible, sinon localStorage fallback
+    if (DB._cache[k] !== null && DB._cache[k] !== undefined) return DB._cache[k];
+    try { return JSON.parse(localStorage.getItem('lt_'+k)) ?? def; } catch { return def; }
+  },
+  set: (k, v) => {
+    DB._cache[k] = v;
+    localStorage.setItem('lt_'+k, JSON.stringify(v)); // cache local immédiat
+    // Sync Supabase en arrière-plan
+    DB._sync(k, v);
+  },
+  _sync: async (k, v) => {
+    try {
+      if (k === 'runs') {
+        if (!v.length) return;
+        await SBX.upsert('running_sessions', v.map(r => ({
+          id: String(r.id), run_date: r.date, dist: r.dist ? parseFloat(r.dist) : null,
+          dur: r.dur, dur_sec: r.durSec || null, pace: r.pace, notes: r.notes || '', source: r.source || 'manual'
+        })));
+      }
+      if (k === 'records') {
+        if (!v.length) return;
+        await SBX.upsert('running_records', v.map(r => ({
+          id: String(r.id), run_date: r.date || new Date().toISOString().split('T')[0],
+          distance: r.dist || '', dur: r.time || r.dur, dur_sec: null,
+          pace: null, context: r.ctx || r.notes || '', source: 'manual'
+        })));
+      }
+    } catch(e) { console.warn('DB sync error:', e); }
+  },
+  // Charge depuis Supabase au démarrage
+  async load() {
+    try {
+      const [runs, records] = await Promise.all([
+        SBX.get('running_sessions', { select: '*', order: 'run_date.desc', limit: 200 }),
+        SBX.get('running_records',  { select: '*', order: 'run_date.desc', limit: 100 })
+      ]);
+      DB._cache.runs = runs.map(r => ({
+        id: r.id, date: r.run_date, dist: r.dist, dur: r.dur, durSec: r.dur_sec,
+        pace: r.pace, notes: r.notes, source: r.source
+      }));
+      DB._cache.records = records.map(r => ({
+        id: r.id, date: r.run_date, time: r.dur, dist: r.distance || '',
+        ctx: r.context || '', notes: r.context || '', source: r.source
+      }));
+      localStorage.setItem('lt_runs',    JSON.stringify(DB._cache.runs));
+      localStorage.setItem('lt_records', JSON.stringify(DB._cache.records));
+    } catch(e) {
+      console.warn('DB.load fallback to localStorage:', e);
+      DB._cache.runs    = JSON.parse(localStorage.getItem('lt_runs')    || '[]');
+      DB._cache.records = JSON.parse(localStorage.getItem('lt_records') || '[]');
+    }
+  }
+};
+
+// Seed Strava PRs si table vide
+(async function seedPRs() {
+  await DB.load();
+  if (DB.get('records', []).length) return;
   const strava = [
-    { dist:'400 m', time:'1:21', date:'2025-05-15', ctx:'Après 3km — non à jeun', id: Date.now()+1, isPR:true },
-    { dist:'1/2 mile', time:'3:33', date:'2025-05-10', ctx:'Strava', id: Date.now()+2, isPR:true },
-    { dist:'1 KM', time:'4:27', date:'2025-05-12', ctx:'Strava', id: Date.now()+3, isPR:true },
-    { dist:'1 mile', time:'7:36', date:'2025-05-14', ctx:'Strava', id: Date.now()+4, isPR:true },
-    { dist:'2 miles', time:'18:28', date:'2025-05-13', ctx:'Strava', id: Date.now()+5, isPR:true },
-    { dist:'5 KM', time:'29:53', date:'2025-05-20', ctx:'Avec accélérations, mal au ventre, marche', id: Date.now()+6, isPR:true },
-    { dist:'10 KM', time:'1:07:33', date:'2025-05-22', ctx:'Premier 10k — marche à certains moments', id: Date.now()+7, isPR:true },
+    { dist:'400 m',    time:'1:21',    date:'2025-05-15', ctx:'Après 3km — non à jeun',                        id: String(Date.now()+1) },
+    { dist:'1/2 mile', time:'3:33',    date:'2025-05-10', ctx:'Strava',                                        id: String(Date.now()+2) },
+    { dist:'1 KM',     time:'4:27',    date:'2025-05-12', ctx:'Strava',                                        id: String(Date.now()+3) },
+    { dist:'1 mile',   time:'7:36',    date:'2025-05-14', ctx:'Strava',                                        id: String(Date.now()+4) },
+    { dist:'2 miles',  time:'18:28',   date:'2025-05-13', ctx:'Strava',                                        id: String(Date.now()+5) },
+    { dist:'5 KM',     time:'29:53',   date:'2025-05-20', ctx:'Avec accélérations, mal au ventre, marche',     id: String(Date.now()+6) },
+    { dist:'10 KM',    time:'1:07:33', date:'2025-05-22', ctx:'Premier 10k — marche à certains moments',       id: String(Date.now()+7) },
   ];
   DB.set('records', strava);
 })();
@@ -1770,181 +1905,72 @@ function typeLabel(t) {
 // Each exercise log: { date, exercises:[{name,sets,reps,duration,completed}], rpe, note }
 
 const SDB = {
-  get: (k, def) => { try { const v = localStorage.getItem('str_'+k); return v !== null ? JSON.parse(v) : def; } catch { return def; } },
-  set: (k,v) => { localStorage.setItem('str_'+k, JSON.stringify(v)); }
+  _cache: {},
+  get: (k, def) => {
+    if (SDB._cache[k] !== undefined) return SDB._cache[k];
+    try { const v = localStorage.getItem('str_'+k); return v !== null ? JSON.parse(v) : def; } catch { return def; }
+  },
+  set: (k, v) => {
+    SDB._cache[k] = v;
+    localStorage.setItem('str_'+k, JSON.stringify(v));
+    SDB._sync(k, v);
+  },
+  _sync: async (k, v) => {
+    try {
+      if (k === 'logs') {
+        if (!Array.isArray(v) || !v.length) return;
+        await SBX.upsert('strength_sessions', v.map(s => ({
+          id: s.id || String(Date.now()), session_date: s.date,
+          rpe: s.rpe || null, note: s.note || '',
+          exercises: JSON.stringify(s.exercises || [])
+        })));
+      }
+      if (k === 'prog') {
+        await SBX.upsert('strength_prog', [{ id: 1, prog: JSON.stringify(v), updated_at: new Date().toISOString() }]);
+      }
+      if (k === 'prev_prog' && v) {
+        await SBX.upsert('strength_prog', [{ id: 1, prev_prog: JSON.stringify(v), updated_at: new Date().toISOString() }]);
+      }
+      if (k.startsWith('eow_')) {
+        await SBX.upsert('strength_eow', [{ week_key: k.replace('eow_',''), feeling: v.feeling, result_text: v.resultText }]);
+      }
+    } catch(e) { console.warn('SDB sync error:', e); }
+  },
+  async load() {
+    try {
+      const [sessions, prog, eows] = await Promise.all([
+        SBX.get('strength_sessions', { select: '*', order: 'session_date.desc', limit: 365 }),
+        SBX.get('strength_prog',     { select: '*', limit: 1 }),
+        SBX.get('strength_eow',      { select: '*', order: 'created_at.desc', limit: 52 })
+      ]);
+      const logs = sessions.map(s => ({
+        id: s.id, date: s.session_date, rpe: s.rpe, note: s.note,
+        exercises: typeof s.exercises === 'string' ? JSON.parse(s.exercises) : (s.exercises || [])
+      }));
+      SDB._cache.logs = logs;
+      localStorage.setItem('str_logs', JSON.stringify(logs));
+
+      if (prog.length && prog[0].prog) {
+        const p = typeof prog[0].prog === 'string' ? JSON.parse(prog[0].prog) : prog[0].prog;
+        SDB._cache.prog = p;
+        localStorage.setItem('str_prog', JSON.stringify(p));
+        if (prog[0].prev_prog) {
+          const pp = typeof prog[0].prev_prog === 'string' ? JSON.parse(prog[0].prev_prog) : prog[0].prev_prog;
+          SDB._cache.prev_prog = pp;
+          localStorage.setItem('str_prev_prog', JSON.stringify(pp));
+        }
+      }
+      eows.forEach(e => {
+        const key = `eow_${e.week_key}`;
+        const val = { feeling: e.feeling, resultText: e.result_text };
+        SDB._cache[key] = val;
+        localStorage.setItem('str_'+key, JSON.stringify(val));
+      });
+    } catch(e) {
+      console.warn('SDB.load fallback to localStorage:', e);
+    }
+  }
 };
-
-// ── Cache mémoire des logs (chargés depuis Supabase)
-let _strLogs = null;
-let _strLogsLoading = false;
-let _strLogsCallbacks = [];
-
-// Charger les logs depuis Supabase (avec cache)
-async function strLoadLogs(force=false) {
-  if (_strLogs && !force) return _strLogs;
-  if (_strLogsLoading) {
-    return new Promise(res => _strLogsCallbacks.push(res));
-  }
-  _strLogsLoading = true;
-  try {
-    const rows = await SB.query('strength_sessions', {
-      select: 'id,session_date,muscle_group,rpe,note,duration_min',
-      order: 'session_date.desc',
-      limit: 500
-    });
-    // Charger les sets pour chaque session
-    const sessionIds = rows.map(r => r.id);
-    let sets = [];
-    if (sessionIds.length) {
-      // Fetch all sets in one query using in filter
-      sets = await SB.query('strength_sets', {
-        select: 'id,session_id,exercise_name,set_number,reps,weight_kg,duration_sec,completed',
-        order: 'set_number.asc',
-        limit: 5000
-      });
-    }
-    // Construire le format local : { id, date, exercises:[{key, sets:[]}], rpe, note }
-    _strLogs = rows.map(r => {
-      const sessionSets = sets.filter(s => s.session_id === r.id);
-      // Grouper les sets par exercice
-      const exMap = {};
-      sessionSets.forEach(s => {
-        const key = strNameToKey(s.exercise_name);
-        if (!exMap[key]) exMap[key] = [];
-        const val = s.duration_sec ?? s.reps ?? 0;
-        exMap[key].push(val);
-      });
-      return {
-        id: r.id,
-        date: r.session_date,
-        rpe: r.rpe,
-        note: r.note,
-        exercises: Object.entries(exMap).map(([key, sets]) => ({ key, sets }))
-      };
-    });
-  } catch(e) {
-    console.warn('[str] Supabase load error, fallback local:', e.message);
-    _strLogs = SDB.get('logs', []);
-  }
-  _strLogsLoading = false;
-  _strLogsCallbacks.forEach(cb => cb(_strLogs));
-  _strLogsCallbacks = [];
-  return _strLogs;
-}
-
-// Sauvegarder une session sur Supabase
-async function strSaveLog(logEntry) {
-  const { date, exercises, rpe, note } = logEntry;
-  try {
-    // Supprimer l'ancienne session du même jour si elle existe
-    await strDeleteLogByDate(date, false);
-    // Insérer la nouvelle session
-    const sessionRes = await fetch(`${HEALTH_CONFIG.supabaseUrl}/rest/v1/strength_sessions`, {
-      method: 'POST',
-      headers: {
-        'apikey': HEALTH_CONFIG.supabaseKey,
-        'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify([{ session_date: date, rpe: rpe||null, note: note||null, source: 'manual' }])
-    });
-    if (!sessionRes.ok) throw new Error(await sessionRes.text());
-    const sessions = await sessionRes.json();
-    const sessionId = sessions[0]?.id;
-    if (!sessionId) throw new Error('No session ID returned');
-    // Insérer les sets
-    const setsToInsert = [];
-    exercises.forEach(ex => {
-      const exName = strKeyToName(ex.key);
-      const prog = getCurrentProg()[ex.key];
-      const isTime = prog?.unit === 's';
-      ex.sets.forEach((val, i) => {
-        setsToInsert.push({
-          session_id: sessionId,
-          exercise_name: exName,
-          set_number: i + 1,
-          reps: isTime ? null : val,
-          duration_sec: isTime ? val : null,
-          completed: true
-        });
-      });
-    });
-    if (setsToInsert.length) {
-      await fetch(`${HEALTH_CONFIG.supabaseUrl}/rest/v1/strength_sets`, {
-        method: 'POST',
-        headers: {
-          'apikey': HEALTH_CONFIG.supabaseKey,
-          'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(setsToInsert)
-      });
-    }
-    // Invalider le cache
-    _strLogs = null;
-    return true;
-  } catch(e) {
-    console.error('[str] Save error:', e.message);
-    // Fallback local
-    const logs = SDB.get('logs', []);
-    const filtered = logs.filter(l => l.date !== date);
-    filtered.unshift(logEntry);
-    SDB.set('logs', filtered);
-    return false;
-  }
-}
-
-// Supprimer une session par date
-async function strDeleteLogByDate(date, invalidateCache=true) {
-  try {
-    // Trouver l'id de la session
-    const existing = await SB.query('strength_sessions', {
-      select: 'id',
-      filter: `session_date=eq.${date}`,
-      limit: 1
-    });
-    if (existing?.length) {
-      await fetch(`${HEALTH_CONFIG.supabaseUrl}/rest/v1/strength_sessions?id=eq.${existing[0].id}`, {
-        method: 'DELETE',
-        headers: { 'apikey': HEALTH_CONFIG.supabaseKey, 'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}` }
-      });
-    }
-    if (invalidateCache) _strLogs = null;
-  } catch(e) { console.warn('[str] Delete error:', e.message); }
-}
-
-// Supprimer une session par id
-async function strDeleteLogById(id) {
-  try {
-    await fetch(`${HEALTH_CONFIG.supabaseUrl}/rest/v1/strength_sessions?id=eq.${id}`, {
-      method: 'DELETE',
-      headers: { 'apikey': HEALTH_CONFIG.supabaseKey, 'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}` }
-    });
-    _strLogs = null;
-  } catch(e) {
-    // Fallback local
-    const logs = SDB.get('logs', []);
-    SDB.set('logs', logs.filter(l => l.id !== id));
-  }
-}
-
-// Convertir key → nom affiché
-function strKeyToName(key) {
-  const map = { pompes:'Pompes', gainage:'Gainage', abdos:'Abdos (crunch bicycle)', squats:'Squats', chaise:'Chaise (isométrique)' };
-  return map[key] || key;
-}
-// Convertir nom → key
-function strNameToKey(name) {
-  if (!name) return 'unknown';
-  const n = name.toLowerCase();
-  if (n.includes('pompe')) return 'pompes';
-  if (n.includes('gainage')) return 'gainage';
-  if (n.includes('abdo')) return 'abdos';
-  if (n.includes('squat')) return 'squats';
-  if (n.includes('chaise')) return 'chaise';
-  return n.replace(/\s+/g,'_');
-}
 
 // ── Programme de base (tiré de l'image) ──
 // Pompes: ex 13-11-10 puis 11-9-7 en regression (données 25/05 = semaine de reprise)
@@ -2005,86 +2031,22 @@ function strDayFr(d) {
 }
 
 // ── Current programme (progressive overload) ──
-// ── Cache mémoire du programme
-let _strProg = null;
-
-const PROG_DEFAULT = {
-  pompes:  { sets:[13,11,10] },
-  gainage: { sets:[65,65], unit:'s' },
-  abdos:   { sets:[20,20] },
-  squats:  { sets:[15,15,15] },
-  chaise:  { sets:[30,30], unit:'s' },
-};
-
-// Charger le programme (localStorage en priorité, Supabase en arrière-plan)
-async function loadProgFromDB() {
-  // 1. Charger immédiatement depuis localStorage (sync, instantané)
-  const local = SDB.get('prog', null);
-  _strProg = local || { ...PROG_DEFAULT };
-
-  // 2. Essayer de syncer avec Supabase en arrière-plan (sans bloquer le rendu)
-  try {
-    const rows = await SB.query('strength_program', { select: 'exercise_key,sets,unit', limit: 20 });
-    if (rows?.length) {
-      const prog = {};
-      rows.forEach(r => {
-        prog[r.exercise_key] = { sets: r.sets, ...(r.unit && r.unit !== 'reps' ? { unit: r.unit } : {}) };
-      });
-      _strProg = prog;
-      SDB.set('prog', prog); // mettre à jour localStorage
-    } else if (!local) {
-      // Rien en local ni Supabase → seed
-      await saveProgToDB({ ...PROG_DEFAULT });
-    }
-  } catch(e) {
-    console.warn('[str] loadProg Supabase error (using local):', e.message);
-  }
-  return _strProg;
-}
-
-// Sauvegarder le programme (localStorage immédiat + Supabase async)
-async function saveProgToDB(prog) {
-  _strProg = prog;
-  SDB.set('prog', prog); // localStorage immédiat
-  try {
-    const rows = Object.entries(prog).map(([key, val]) => ({
-      exercise_key: key,
-      sets: val.sets,
-      unit: val.unit || 'reps',
-      updated_at: new Date().toISOString()
-    }));
-    await fetch(`${HEALTH_CONFIG.supabaseUrl}/rest/v1/strength_program`, {
-      method: 'POST',
-      headers: {
-        'apikey': HEALTH_CONFIG.supabaseKey,
-        'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify(rows)
-    });
-  } catch(e) {
-    console.warn('[str] saveProg Supabase error:', e.message);
-  }
-}
-
-// Sync (retourne toujours le cache local immédiatement)
 function getCurrentProg() {
-  if (!_strProg) {
-    _strProg = SDB.get('prog', { ...PROG_DEFAULT });
-  }
-  return _strProg;
+  const base = SDB.get('prog', {
+    pompes:  { sets:[13,11,10] },
+    gainage: { sets:[65,65], unit:'s' },
+    abdos:   { sets:[20,20] },
+    squats:  { sets:[15,15,15] },
+    chaise:  { sets:[30,30], unit:'s' },
+  });
+  return base;
 }
 
-function saveProg(p) {
-  _strProg = p;
-  SDB.set('prog', p); // immédiat
-  saveProgToDB(p);    // async Supabase
-}
+function saveProg(p) { SDB.set('prog', p); }
 
 // ── Constance score ──
-function getConstanceScore(logs) {
-  logs = logs || _strLogs || [];
+function getConstanceScore() {
+  const logs = SDB.get('logs', []);
   const today = new Date();
   let total = 0, done = 0;
   for (let i = 6; i >= 0; i--) {
@@ -2096,6 +2058,7 @@ function getConstanceScore(logs) {
       if (logs.find(l => l.date === key)) done++;
     }
   }
+  // Streak
   let streak = 0;
   for (let i = 0; i < 30; i++) {
     const d = new Date(today); d.setDate(d.getDate() - i);
@@ -2109,8 +2072,8 @@ function getConstanceScore(logs) {
 }
 
 // ── Check if today is logged ──
-function isTodayLogged(logs) {
-  logs = logs || _strLogs || [];
+function isTodayLogged() {
+  const logs = SDB.get('logs', []);
   const key = new Date().toISOString().split('T')[0];
   return !!logs.find(l => l.date === key);
 }
@@ -2131,16 +2094,13 @@ function strShowTab(id) {
 
 // ═══ RENDER TODAY ═══
 function renderStrToday() {
-  // getCurrentProg() est synchrone (localStorage), strLoadLogs() est async
-  strLoadLogs().then(logs => _renderStrTodayWithLogs(logs));
-}
-
-function _renderStrTodayWithLogs(logs) {
   const prog = getCurrentProg();
-  const sc = getConstanceScore(logs);
+  const sc = getConstanceScore();
   const dayKey = getTodayDayKey();
   const sched = WEEKLY_SCHEDULE[dayKey];
+  const todayLogged = isTodayLogged();
   const todayDate = new Date().toISOString().split('T')[0];
+  const logs = SDB.get('logs', []);
   const todayLog = logs.find(l => l.date === todayDate);
 
   // Update subtitle
@@ -2258,29 +2218,30 @@ function toggleSet(key, idx) {
   if (chip) chip.classList.toggle('done', checked.includes(idx));
 }
 
-async function quickLogToday() {
+function quickLogToday() {
   const date = new Date().toISOString().split('T')[0];
-  const logs = await strLoadLogs();
+  const logs = SDB.get('logs', []);
   if (logs.find(l => l.date === date)) return;
   const dayKey = getTodayDayKey();
   const prog = getCurrentProg();
   const exercises = decodeTypes(WEEKLY_SCHEDULE[dayKey].types).filter(e=>e.key!=='rest');
-  const entry = { id: uid(), date, exercises: exercises.map(e => ({ key:e.key, sets: prog[e.key]?.sets||[] })), rpe: null, note: '' };
-  await strSaveLog(entry);
+  logs.unshift({ id: uid(), date, exercises: exercises.map(e => ({ key:e.key, sets: prog[e.key]?.sets||[] })), rpe: null, note: '' });
+  SDB.set('logs', logs);
   showToast('Séance cochée ✓');
   renderStrToday();
 }
 
-async function unlogToday() {
+function unlogToday() {
   const date = new Date().toISOString().split('T')[0];
-  await strDeleteLogByDate(date);
+  const logs = SDB.get('logs', []);
+  SDB.set('logs', logs.filter(l => l.date !== date));
   showToast('Séance décochée');
   renderStrToday();
 }
 
 // ═══ NEXT WEEK SUGGESTIONS ═══
 function renderNextWeekCard() {
-  const logs = _strLogs || [];
+  const logs = SDB.get('logs', []);
   const prog = getCurrentProg();
   const card = document.getElementById('next-week-card');
   const cont = document.getElementById('next-week-content');
@@ -2565,7 +2526,7 @@ function resetEow(weekKey) {
 // (per set max)
 function getMuscleGrades() {
   const prog = getCurrentProg();
-  const logs = _strLogs || [];
+  const logs = SDB.get('logs', []);
 
   // Score based on current programme level
   function gradeScore(key) {
@@ -3069,10 +3030,8 @@ function renderMuscleMap() {
 
 // ═══ RENDER WEEK ═══
 function renderStrWeek() {
-  strLoadLogs().then(logs => _renderStrWeekWithLogs(logs));
-}
-function _renderStrWeekWithLogs(logs) {
   const prog = getCurrentProg();
+  const logs = SDB.get('logs', []);
   const today = new Date().toISOString().split('T')[0];
   const todayKey = getTodayDayKey();
   const days = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
@@ -3156,8 +3115,8 @@ function _renderStrWeekWithLogs(logs) {
 
 // ═══ RENDER PROGRESS ═══
 function renderStrProgress() {
-  strLoadLogs(true).then(logs => {
-    const prog = getCurrentProg();
+  const logs = SDB.get('logs', []);
+  const prog = getCurrentProg();
 
   if (logs.length < 2) {
     document.getElementById('progress-content').innerHTML = `<div class="card"><div class="empty"><div class="empty-icon">📈</div><div class="empty-msg">Enregistre au moins 2 séances pour voir ta progression.</div></div></div>`;
@@ -3237,7 +3196,6 @@ function renderStrProgress() {
   </div>`;
 
   document.getElementById('progress-content').innerHTML = html;
-  }); // end Promise.all
 }
 
 // ═══ RENDER LOG ═══
@@ -3300,12 +3258,13 @@ function saveStrSession() {
   });
   saveProg(prog);
 
-  const logEntry = { id: uid(), date, exercises: exerciseData, rpe, note };
-  strSaveLog(logEntry).then(() => {
-    showToast('Séance enregistrée et programme mis à jour ✓');
-    strShowTab('today-tab');
-  });
+  const logs = SDB.get('logs', []);
+  // Remove existing log for same date
+  const filtered = logs.filter(l => l.date !== date);
+  filtered.unshift({ id: uid(), date, exercises: exerciseData, rpe, note });
+  SDB.set('logs', filtered);
 
+  showToast('Séance enregistrée et programme mis à jour ✓');
   document.getElementById('str-rpe').value = '';
   document.getElementById('str-note').value = '';
   strShowTab('today-tab');
@@ -3313,12 +3272,7 @@ function saveStrSession() {
 
 // ═══ RENDER HISTORY ═══
 function renderStrHistory() {
-  const el = document.getElementById('str-history-list');
-  if (el) el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);">Chargement...</div>';
-  strLoadLogs().then(logs => _renderStrHistoryWithLogs(logs));
-}
-
-function _renderStrHistoryWithLogs(logs) {
+  const logs = SDB.get('logs', []);
   const prog = getCurrentProg();
   if (!logs.length) {
     document.getElementById('str-history-list').innerHTML = `<div class="empty"><div class="empty-icon">💪</div><div class="empty-msg">Aucune séance enregistrée. Commence dès aujourd'hui !</div></div>`;
@@ -3346,18 +3300,26 @@ function _renderStrHistoryWithLogs(logs) {
   }).join('');
 }
 
-async function deleteStrLog(id) {
-  await strDeleteLogById(id);
+function deleteStrLog(id) {
+  const logs = SDB.get('logs', []);
+  SDB.set('logs', logs.filter(l => l.id !== id));
   showToast('Séance supprimée');
   renderStrHistory();
-  renderStrToday();
 }
 
-// ─── Précharger le programme au démarrage ───
-loadProgFromDB().then(prog => {
-  _strProg = prog;
-  console.log('[str] Programme chargé:', Object.keys(prog).join(', '));
-});
+// ─── Seed initial prog from spreadsheet if not set ───
+(function seedStrProg() {
+  const existing = SDB.get('prog', null);
+  if (existing) return; // already seeded
+  // Semaine 25/05 : Pompes 11-9-7, Gainage 2×65s, Abdos 2×20, Squats 3×15
+  SDB.set('prog', {
+    pompes:  { sets:[11,9,7] },
+    gainage: { sets:[65,65], unit:'s' },
+    abdos:   { sets:[20,20] },
+    squats:  { sets:[15,15,15] },
+    chaise:  { sets:[30,30], unit:'s' },
+  });
+})();
 
 
 document.getElementById('rec-date').value = today();
@@ -3726,10 +3688,63 @@ function hHex2rgba(color,alpha) { if(color.startsWith('#')){const r=parseInt(col
 // ═══════════════════════════════════════════════════════
 
 const CDB = {
-  getTasks: () => { try { return JSON.parse(localStorage.getItem('home_tasks') || 'null') || getDefaultTasks(); } catch { return getDefaultTasks(); } },
-  setTasks: (t) => localStorage.setItem('home_tasks', JSON.stringify(t)),
-  getState: (d) => { try { return JSON.parse(localStorage.getItem('home_state_' + d) || '{}'); } catch { return {}; } },
-  setState: (d, s) => localStorage.setItem('home_state_' + d, JSON.stringify(s)),
+  _tasks: null,
+  _states: {},
+  getTasks: () => {
+    if (CDB._tasks) return CDB._tasks;
+    try { return JSON.parse(localStorage.getItem('home_tasks') || 'null') || getDefaultTasks(); } catch { return getDefaultTasks(); }
+  },
+  setTasks: async (t) => {
+    CDB._tasks = t;
+    localStorage.setItem('home_tasks', JSON.stringify(t));
+    try {
+      // Upsert all tasks, mark deleted ones inactive
+      const existing = await SBX.get('tasks', { select: 'id' });
+      const existingIds = existing.map(e => e.id);
+      const toUpsert = t.map((task, i) => ({
+        id: task.id, icon: task.icon, label: task.label,
+        recur: task.recur, added_date: task.addedDate || null,
+        sort_order: i, active: true
+      }));
+      // Deactivate removed tasks
+      const removedIds = existingIds.filter(id => !t.find(x => x.id === id));
+      for (const id of removedIds) {
+        await SBX.upsert('tasks', [{ id, active: false }]);
+      }
+      if (toUpsert.length) await SBX.upsert('tasks', toUpsert);
+    } catch(e) { console.warn('CDB.setTasks sync error:', e); }
+  },
+  getState: (d) => {
+    if (CDB._states[d]) return CDB._states[d];
+    try { return JSON.parse(localStorage.getItem('home_state_' + d) || '{}'); } catch { return {}; }
+  },
+  setState: async (d, s) => {
+    CDB._states[d] = s;
+    localStorage.setItem('home_state_' + d, JSON.stringify(s));
+    try {
+      const rows = Object.entries(s).map(([task_id, done]) => ({ state_date: d, task_id, done }));
+      if (rows.length) await SBX.upsert('task_state', rows);
+    } catch(e) { console.warn('CDB.setState sync error:', e); }
+  },
+  async load() {
+    try {
+      const [tasks, states] = await Promise.all([
+        SBX.get('tasks', { select: '*', filter: 'active=eq.true', order: 'sort_order.asc' }),
+        SBX.get('task_state', { select: '*', filter: `state_date=gte.${new Date(Date.now()-7*864e5).toISOString().split('T')[0]}` })
+      ]);
+      if (tasks.length) {
+        CDB._tasks = tasks.map(t => ({
+          id: t.id, icon: t.icon, label: t.label, recur: t.recur, addedDate: t.added_date
+        }));
+        localStorage.setItem('home_tasks', JSON.stringify(CDB._tasks));
+      }
+      // Group states by date
+      states.forEach(s => {
+        if (!CDB._states[s.state_date]) CDB._states[s.state_date] = {};
+        CDB._states[s.state_date][s.task_id] = s.done;
+      });
+    } catch(e) { console.warn('CDB.load fallback to localStorage:', e); }
+  }
 };
 
 function getDefaultTasks() {
@@ -3753,10 +3768,10 @@ function isTaskActiveToday(task) {
   return true;
 }
 
-function toggleTask(id) {
+async function toggleTask(id) {
   const d = today(), state = CDB.getState(d);
   state[id] = !state[id];
-  CDB.setState(d, state);
+  await CDB.setState(d, state);
   // Mise à jour visuelle immédiate sans re-fetch santé
   const tasks = CDB.getTasks();
   renderChecklistUI(tasks, state);
@@ -3769,9 +3784,9 @@ function toggleTask(id) {
   if(gdd) gdd.innerHTML = gd.slice(0,6).map(d=>`<span class="score-pill" style="background:${d.ok?'rgba(0,232,122,0.12)':'rgba(255,92,92,0.1)'};color:${d.ok?'var(--green)':'var(--red)'}"> ${d.ok?'✓':'✗'} ${d.label}</span>`).join('');
 }
 
-function deleteTask(id) {
+async function deleteTask(id) {
   const tasks = CDB.getTasks().filter(t => t.id !== id);
-  CDB.setTasks(tasks);
+  await CDB.setTasks(tasks);
   renderChecklistUI(tasks, CDB.getState(today()));
 }
 
@@ -3793,14 +3808,14 @@ function selectEmoji(e) {
   document.querySelectorAll('.emoji-opt').forEach(el => el.classList.remove('selected'));
   event.target.classList.add('selected');
 }
-function confirmAddTask() {
+async function confirmAddTask() {
   const label = document.getElementById('task-label').value.trim();
   if (!label) { document.getElementById('task-label').focus(); return; }
   const emoji = document.getElementById('task-emoji').value.trim() || _selEmoji || '✅';
   const recur = document.getElementById('task-recur').value;
   const tasks = CDB.getTasks();
   tasks.push({ id:'t'+Date.now(), icon:emoji, label, recur, addedDate:today() });
-  CDB.setTasks(tasks);
+  await CDB.setTasks(tasks);
   closeAddTask();
   renderChecklistUI(tasks, CDB.getState(today()));
 }
@@ -3917,6 +3932,221 @@ function animateCounter(id,target){const el=document.getElementById(id);if(!el)r
 })();
 
 renderHomePage();
+
+// ═══════════════════════════════════════════════════════
+//  SCORE HISTORY DATABASE
+// ═══════════════════════════════════════════════════════
+
+const ScoreDB = {
+  _cache: [],
+  getAll: () => ScoreDB._cache.length ? ScoreDB._cache : (JSON.parse(localStorage.getItem('lt_scoreHistory') || '[]')),
+  save: async (scoreDate, goals, health) => {
+    const entry = { score_date: scoreDate, goals_score: goals, health_score: health, perfect: goals >= 100 && health >= 80 };
+    const idx = ScoreDB._cache.findIndex(s => s.date === scoreDate);
+    if (idx >= 0) ScoreDB._cache[idx] = { date: scoreDate, goals, health, perfect: entry.perfect };
+    else ScoreDB._cache.push({ date: scoreDate, goals, health, perfect: entry.perfect });
+    ScoreDB._cache.sort((a,b) => a.date.localeCompare(b.date));
+    localStorage.setItem('lt_scoreHistory', JSON.stringify(ScoreDB._cache));
+    try { await SBX.upsert('score_history', [entry]); } catch(e) { console.warn('ScoreDB.save error:', e); }
+  },
+  getLast: (days) => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
+    const cutStr = cutoff.toISOString().split('T')[0];
+    return ScoreDB.getAll().filter(s => s.date >= cutStr);
+  },
+  getPerfectCount: () => ScoreDB.getAll().filter(s => s.perfect).length,
+  getPerfectStreak: () => {
+    const all = ScoreDB.getAll().slice().reverse();
+    let streak = 0;
+    for (const s of all) { if (s.perfect) streak++; else break; }
+    return streak;
+  },
+  async load() {
+    try {
+      const rows = await SBX.get('score_history', { select: '*', order: 'score_date.asc', limit: 365 });
+      ScoreDB._cache = rows.map(r => ({
+        date: r.score_date, goals: r.goals_score, health: r.health_score, perfect: r.perfect
+      }));
+      localStorage.setItem('lt_scoreHistory', JSON.stringify(ScoreDB._cache));
+    } catch(e) {
+      console.warn('ScoreDB.load fallback:', e);
+      ScoreDB._cache = JSON.parse(localStorage.getItem('lt_scoreHistory') || '[]');
+    }
+  }
+};
+
+// Hook renderHomePage to auto-save scores after render
+const _origRHP = renderHomePage;
+renderHomePage = async function() {
+  await _origRHP.apply(this, arguments);
+  setTimeout(async () => {
+    const gVal = parseInt(document.getElementById('score-goals-val')?.textContent) || 0;
+    const hVal = parseInt(document.getElementById('score-health-val')?.textContent) || 0;
+    if (gVal > 0 || hVal > 0) {
+      await ScoreDB.save(today(), gVal, hVal);
+      renderPerfectDaysBanner();
+      renderScoresChart(currentHistRange);
+    }
+  }, 900);
+};
+
+// Perfect Days Banner
+function renderPerfectDaysBanner() {
+  const el = document.getElementById('perfect-days-banner');
+  if (!el) return;
+  const total = ScoreDB.getPerfectCount();
+  const streak = ScoreDB.getPerfectStreak();
+  const allScores = ScoreDB.getAll();
+  const dots = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    const entry = allScores.find(s => s.date === ds);
+    const isToday = i === 0;
+    let color;
+    if (!entry) color = 'var(--bg4)';
+    else if (entry.perfect) color = '#00E87A';
+    else if (entry.goals >= 80 || entry.health >= 80) color = '#F5C400';
+    else color = '#FF5C5C';
+    const glow = (entry && entry.perfect && isToday) ? 'box-shadow:0 0 6px #00E87A;' : '';
+    dots.push(`<div style="width:9px;height:9px;border-radius:50%;background:${color};${glow}flex-shrink:0;" title="${ds} — Obj:${entry?entry.goals:'?'} Santé:${entry?entry.health:'?'}"></div>`);
+  }
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,rgba(0,232,122,0.08),rgba(0,232,122,0.02));border:1px solid rgba(0,232,122,0.2);border-radius:var(--radius);padding:14px 20px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:700;color:#00E87A;line-height:1;flex-shrink:0;">${total}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);">Jours parfaits 🎯</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px;">Streak : <strong style="color:${streak>0?'#00E87A':'var(--text2)'}">${streak} j</strong> · Objectifs 100% &amp; Santé ≥ 80%</div>
+      <div style="display:flex;gap:4px;margin-top:8px;align-items:center;">${dots.join('')}
+        <span style="font-size:9px;color:var(--text3);margin-left:4px;">← 14 jours</span>
+      </div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;padding-left:12px;border-left:1px solid var(--border);">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;">Ce mois</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#00E87A;line-height:1.2;">${ScoreDB.getLast(30).filter(s=>s.perfect).length}</div>
+      <div style="font-size:9px;color:var(--text3);margin-top:2px;">parfaits</div>
+    </div>
+  </div>`;
+}
+
+// Score Charts
+let currentHistRange = 7;
+let chartGoalsInst = null;
+let chartHealthInst = null;
+
+function setHistRange(days) {
+  currentHistRange = days;
+  document.querySelectorAll('.hist-range-btn').forEach(b => {
+    b.classList.toggle('active', +b.dataset.days === days);
+  });
+  renderScoresChart(days);
+}
+
+function renderScoresChart(days) {
+  const data = ScoreDB.getLast(days);
+  const container = document.getElementById('scores-chart-container');
+  if (!container) return;
+
+  if (!data.length) {
+    container.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;line-height:1.7;">Pas encore de données.<br>Les scores sont enregistrés automatiquement chaque jour.</div>`;
+    return;
+  }
+
+  if (!document.getElementById('chart-goals')) {
+    container.innerHTML = `
+      <canvas id="chart-goals" height="80"></canvas>
+      <div style="display:flex;align-items:center;gap:6px;margin:6px 0 10px;font-size:11px;color:var(--text3);">
+        <span style="width:12px;height:3px;background:#00E87A;display:inline-block;border-radius:2px;"></span> Objectifs du jour
+      </div>
+      <canvas id="chart-health" height="80"></canvas>
+      <div style="display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:11px;color:var(--text3);">
+        <span style="width:12px;height:3px;background:#FF6B8A;display:inline-block;border-radius:2px;"></span> État de santé
+      </div>`;
+  }
+
+  const labels = [], goalsData = [], healthData = [];
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    const entry = data.find(s => s.date === ds);
+    const showLabel = days <= 14 || i % Math.ceil(days/8) === 0;
+    labels.push(showLabel ? d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '');
+    goalsData.push(entry?.goals ?? null);
+    healthData.push(entry?.health ?? null);
+  }
+
+  const mkDataset = (arr, color) => ({
+    data: arr,
+    borderColor: color,
+    backgroundColor: color + '18',
+    borderWidth: 2,
+    pointRadius: ctx => ctx.raw !== null ? (days<=14?3.5:2) : 0,
+    pointBackgroundColor: color,
+    pointHoverRadius: 5,
+    tension: 0.38,
+    fill: true,
+    spanGaps: true,
+  });
+
+  const baseOpts = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#161f1c', borderColor: '#2a3d32', borderWidth: 1,
+        titleColor: '#7a9e8e', bodyColor: '#b0c8bc', padding: 8,
+        callbacks: { label: ctx => ctx.raw !== null ? ` ${ctx.raw}/100` : ' —' }
+      }
+    },
+    scales: {
+      x: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#4e6a5e',font:{size:9,family:"'JetBrains Mono',monospace"},maxRotation:0} },
+      y: { min:0, max:100, grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#4e6a5e',font:{size:9},stepSize:50} }
+    }
+  };
+
+  function drawCharts() {
+    if (typeof Chart === 'undefined') return;
+    const ctxG = document.getElementById('chart-goals');
+    const ctxH = document.getElementById('chart-health');
+    if (!ctxG || !ctxH) return;
+    if (chartGoalsInst) { chartGoalsInst.destroy(); chartGoalsInst = null; }
+    if (chartHealthInst) { chartHealthInst.destroy(); chartHealthInst = null; }
+    chartGoalsInst = new Chart(ctxG, {type:'line', data:{labels, datasets:[mkDataset(goalsData,'#00E87A')]}, options:JSON.parse(JSON.stringify(baseOpts))});
+    chartHealthInst = new Chart(ctxH, {type:'line', data:{labels, datasets:[mkDataset(healthData,'#FF6B8A')]}, options:JSON.parse(JSON.stringify(baseOpts))});
+  }
+
+  if (typeof Chart !== 'undefined') {
+    drawCharts();
+  } else {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    s.onload = drawCharts;
+    document.head.appendChild(s);
+  }
+}
+
+// Initialise
+renderPerfectDaysBanner();
+setTimeout(() => renderScoresChart(currentHistRange), 500);
+
+// ── Master init: charge toutes les données Supabase au démarrage ──
+(async function initAllDBs() {
+  try {
+    await Promise.all([
+      ScoreDB.load(),
+      DB.load(),
+      SDB.load(),
+      CDB.load()
+    ]);
+    console.log('✅ Données chargées depuis Supabase');
+    // Re-render home avec données fraîches
+    renderHomePage();
+    renderPerfectDaysBanner();
+    setTimeout(() => renderScoresChart(currentHistRange), 300);
+  } catch(e) {
+    console.warn('Init partiel (fallback localStorage):', e);
+    renderHomePage();
+  }
+})();
 </script>
 </body>
 </html>
