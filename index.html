@@ -581,6 +581,26 @@ select.form-control option { background: var(--bg3); }
 .hs-val   { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text); }
 .hs-label { font-size: 10px; color: var(--text3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
 .score-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 8px; font-size: 11px; font-weight: 500; }
+
+/* Perfect days banner */
+.perfect-banner {
+  display: flex; align-items: center; gap: 16px;
+  background: linear-gradient(135deg, rgba(0,232,122,0.08) 0%, rgba(0,232,122,0.03) 100%);
+  border: 1px solid rgba(0,232,122,0.25); border-radius: var(--radius);
+  padding: 14px 20px;
+}
+.perfect-count {
+  font-family: 'JetBrains Mono', monospace; font-size: 38px; font-weight: 700;
+  color: var(--green); line-height: 1; flex-shrink: 0;
+}
+.perfect-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.perfect-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.perfect-streak-mini { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.perfect-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Chart range buttons */
+.hist-range-btn { font-size: 11px !important; padding: 4px 10px !important; }
+.hist-range-btn.active { background: var(--green-dim) !important; color: var(--green) !important; border-color: var(--green) !important; }
 .emoji-opt:hover { border-color: var(--green) !important; }
 .emoji-opt.selected { border-color: var(--green) !important; background: var(--green-dim); }
 
@@ -731,6 +751,9 @@ select.form-control option { background: var(--bg3); }
   </div>
   <div class="content">
 
+    <!-- ── PERFECT DAYS COUNTER ── -->
+    <div id="perfect-days-banner" style="margin-bottom:16px;"></div>
+
     <!-- ── SCORES ── -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
       <!-- Score Santé -->
@@ -790,6 +813,28 @@ select.form-control option { background: var(--bg3); }
     <div class="card">
       <div class="card-title">🏃 Sport aujourd'hui</div>
       <div id="home-sport-strip"></div>
+    </div>
+
+    <!-- ── HISTORIQUE SCORES ── -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:0;">📈 Évolution des scores</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost hist-range-btn active" data-days="7" onclick="setHistRange(7)">7j</button>
+          <button class="btn btn-ghost hist-range-btn" data-days="30" onclick="setHistRange(30)">30j</button>
+          <button class="btn btn-ghost hist-range-btn" data-days="90" onclick="setHistRange(90)">90j</button>
+        </div>
+      </div>
+      <div id="scores-chart-container">
+        <canvas id="chart-goals" height="80"></canvas>
+        <div style="display:flex;align-items:center;gap:6px;margin:6px 0 10px;font-size:11px;color:var(--text3);">
+          <span style="width:12px;height:3px;background:#00E87A;display:inline-block;border-radius:2px;"></span> Objectifs
+        </div>
+        <canvas id="chart-health" height="80"></canvas>
+        <div style="display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:11px;color:var(--text3);">
+          <span style="width:12px;height:3px;background:#FF6B8A;display:inline-block;border-radius:2px;"></span> Santé
+        </div>
+      </div>
     </div>
 
   </div>
@@ -1274,25 +1319,114 @@ select.form-control option { background: var(--bg3); }
 
 <script>
 // ═══════════════════════════════════════════════════════
-//  DATA LAYER  (localStorage)
+//  DATA LAYER  — Supabase (avec cache local fallback)
 // ═══════════════════════════════════════════════════════
-const DB = {
-  get: (k, def=[]) => { try { return JSON.parse(localStorage.getItem('lt_'+k)) ?? def; } catch { return def; } },
-  set: (k,v) => { localStorage.setItem('lt_'+k, JSON.stringify(v)); }
+
+// ── Client Supabase étendu avec upsert/insert/delete ──
+const SBX = {
+  _headers: () => ({
+    'apikey':        HEALTH_CONFIG.supabaseKey,
+    'Authorization': `Bearer ${HEALTH_CONFIG.supabaseKey}`,
+    'Content-Type':  'application/json',
+    'Prefer':        'return=representation'
+  }),
+  async get(table, opts = {}) {
+    let url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?`;
+    if (opts.select) url += `select=${encodeURIComponent(opts.select)}&`;
+    if (opts.filter) url += `${opts.filter}&`;
+    if (opts.order)  url += `order=${opts.order}&`;
+    if (opts.limit)  url += `limit=${opts.limit}&`;
+    const r = await fetch(url, { headers: SBX._headers() });
+    if (!r.ok) throw new Error(`SB GET ${table} ${r.status}`);
+    return r.json();
+  },
+  async upsert(table, data) {
+    const url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { ...SBX._headers(), 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify(Array.isArray(data) ? data : [data])
+    });
+    if (!r.ok) { const t = await r.text(); throw new Error(`SB UPSERT ${table}: ${t}`); }
+    return r.json();
+  },
+  async delete(table, filter) {
+    const url = `${HEALTH_CONFIG.supabaseUrl}/rest/v1/${table}?${filter}`;
+    const r = await fetch(url, { method: 'DELETE', headers: SBX._headers() });
+    if (!r.ok) throw new Error(`SB DELETE ${table} ${r.status}`);
+  }
 };
 
-// Seed Strava PRs on first load
-(function seedPRs() {
-  const existing = DB.get('records');
-  if (existing.length) return;
+// ── DB running — Supabase (running_sessions + running_records)
+// Garde un cache mémoire pour les lectures synchrones
+const DB = {
+  _cache: { runs: null, records: null },
+  get: (k, def = []) => {
+    // Retourne le cache si disponible, sinon localStorage fallback
+    if (DB._cache[k] !== null && DB._cache[k] !== undefined) return DB._cache[k];
+    try { return JSON.parse(localStorage.getItem('lt_'+k)) ?? def; } catch { return def; }
+  },
+  set: (k, v) => {
+    DB._cache[k] = v;
+    localStorage.setItem('lt_'+k, JSON.stringify(v)); // cache local immédiat
+    // Sync Supabase en arrière-plan
+    DB._sync(k, v);
+  },
+  _sync: async (k, v) => {
+    try {
+      if (k === 'runs') {
+        if (!v.length) return;
+        await SBX.upsert('running_sessions', v.map(r => ({
+          id: String(r.id || r.id), date: r.date, dist: r.dist ? parseFloat(r.dist) : null,
+          dur: r.dur, dur_sec: r.durSec || null, pace: r.pace, notes: r.notes || '', source: r.source || 'manual'
+        })));
+      }
+      if (k === 'records') {
+        if (!v.length) return;
+        await SBX.upsert('running_records', v.map(r => ({
+          id: String(r.id), date: r.date || new Date().toISOString().split('T')[0],
+          dist: null, dur: r.time || r.dur, dur_sec: null, pace: null, notes: (r.dist||'') + ' — ' + (r.ctx||r.notes||''), source: 'manual'
+        })));
+      }
+    } catch(e) { console.warn('DB sync error:', e); }
+  },
+  // Charge depuis Supabase au démarrage
+  async load() {
+    try {
+      const [runs, records] = await Promise.all([
+        SBX.get('running_sessions', { select: '*', order: 'date.desc', limit: 200 }),
+        SBX.get('running_records',  { select: '*', order: 'date.desc', limit: 100 })
+      ]);
+      DB._cache.runs = runs.map(r => ({
+        id: r.id, date: r.date, dist: r.dist, dur: r.dur, durSec: r.dur_sec,
+        pace: r.pace, notes: r.notes, source: r.source
+      }));
+      DB._cache.records = records.map(r => ({
+        id: r.id, date: r.date, time: r.dur, dist: r.notes?.split(' — ')[0] || '',
+        ctx: r.notes?.split(' — ')[1] || '', notes: r.notes, source: r.source
+      }));
+      localStorage.setItem('lt_runs',    JSON.stringify(DB._cache.runs));
+      localStorage.setItem('lt_records', JSON.stringify(DB._cache.records));
+    } catch(e) {
+      console.warn('DB.load fallback to localStorage:', e);
+      DB._cache.runs    = JSON.parse(localStorage.getItem('lt_runs')    || '[]');
+      DB._cache.records = JSON.parse(localStorage.getItem('lt_records') || '[]');
+    }
+  }
+};
+
+// Seed Strava PRs si table vide
+(async function seedPRs() {
+  await DB.load();
+  if (DB.get('records', []).length) return;
   const strava = [
-    { dist:'400 m', time:'1:21', date:'2025-05-15', ctx:'Après 3km — non à jeun', id: Date.now()+1, isPR:true },
-    { dist:'1/2 mile', time:'3:33', date:'2025-05-10', ctx:'Strava', id: Date.now()+2, isPR:true },
-    { dist:'1 KM', time:'4:27', date:'2025-05-12', ctx:'Strava', id: Date.now()+3, isPR:true },
-    { dist:'1 mile', time:'7:36', date:'2025-05-14', ctx:'Strava', id: Date.now()+4, isPR:true },
-    { dist:'2 miles', time:'18:28', date:'2025-05-13', ctx:'Strava', id: Date.now()+5, isPR:true },
-    { dist:'5 KM', time:'29:53', date:'2025-05-20', ctx:'Avec accélérations, mal au ventre, marche', id: Date.now()+6, isPR:true },
-    { dist:'10 KM', time:'1:07:33', date:'2025-05-22', ctx:'Premier 10k — marche à certains moments', id: Date.now()+7, isPR:true },
+    { dist:'400 m',    time:'1:21',    date:'2025-05-15', ctx:'Après 3km — non à jeun',                        id: String(Date.now()+1) },
+    { dist:'1/2 mile', time:'3:33',    date:'2025-05-10', ctx:'Strava',                                        id: String(Date.now()+2) },
+    { dist:'1 KM',     time:'4:27',    date:'2025-05-12', ctx:'Strava',                                        id: String(Date.now()+3) },
+    { dist:'1 mile',   time:'7:36',    date:'2025-05-14', ctx:'Strava',                                        id: String(Date.now()+4) },
+    { dist:'2 miles',  time:'18:28',   date:'2025-05-13', ctx:'Strava',                                        id: String(Date.now()+5) },
+    { dist:'5 KM',     time:'29:53',   date:'2025-05-20', ctx:'Avec accélérations, mal au ventre, marche',     id: String(Date.now()+6) },
+    { dist:'10 KM',    time:'1:07:33', date:'2025-05-22', ctx:'Premier 10k — marche à certains moments',       id: String(Date.now()+7) },
   ];
   DB.set('records', strava);
 })();
@@ -1770,8 +1904,71 @@ function typeLabel(t) {
 // Each exercise log: { date, exercises:[{name,sets,reps,duration,completed}], rpe, note }
 
 const SDB = {
-  get: (k, def) => { try { const v = localStorage.getItem('str_'+k); return v !== null ? JSON.parse(v) : def; } catch { return def; } },
-  set: (k,v) => { localStorage.setItem('str_'+k, JSON.stringify(v)); }
+  _cache: {},
+  get: (k, def) => {
+    if (SDB._cache[k] !== undefined) return SDB._cache[k];
+    try { const v = localStorage.getItem('str_'+k); return v !== null ? JSON.parse(v) : def; } catch { return def; }
+  },
+  set: (k, v) => {
+    SDB._cache[k] = v;
+    localStorage.setItem('str_'+k, JSON.stringify(v));
+    SDB._sync(k, v);
+  },
+  _sync: async (k, v) => {
+    try {
+      if (k === 'logs') {
+        if (!Array.isArray(v) || !v.length) return;
+        await SBX.upsert('strength_sessions', v.map(s => ({
+          id: s.id || String(Date.now()), date: s.date,
+          rpe: s.rpe || null, note: s.note || '',
+          exercises: JSON.stringify(s.exercises || [])
+        })));
+      }
+      if (k === 'prog') {
+        await SBX.upsert('strength_prog', [{ id: 1, prog: JSON.stringify(v), updated_at: new Date().toISOString() }]);
+      }
+      if (k === 'prev_prog' && v) {
+        await SBX.upsert('strength_prog', [{ id: 1, prev_prog: JSON.stringify(v), updated_at: new Date().toISOString() }]);
+      }
+      if (k.startsWith('eow_')) {
+        await SBX.upsert('strength_eow', [{ week_key: k.replace('eow_',''), feeling: v.feeling, result_text: v.resultText }]);
+      }
+    } catch(e) { console.warn('SDB sync error:', e); }
+  },
+  async load() {
+    try {
+      const [sessions, prog, eows] = await Promise.all([
+        SBX.get('strength_sessions', { select: '*', order: 'date.desc', limit: 365 }),
+        SBX.get('strength_prog',     { select: '*', limit: 1 }),
+        SBX.get('strength_eow',      { select: '*', order: 'created_at.desc', limit: 52 })
+      ]);
+      const logs = sessions.map(s => ({
+        id: s.id, date: s.date, rpe: s.rpe, note: s.note,
+        exercises: typeof s.exercises === 'string' ? JSON.parse(s.exercises) : (s.exercises || [])
+      }));
+      SDB._cache.logs = logs;
+      localStorage.setItem('str_logs', JSON.stringify(logs));
+
+      if (prog.length && prog[0].prog) {
+        const p = typeof prog[0].prog === 'string' ? JSON.parse(prog[0].prog) : prog[0].prog;
+        SDB._cache.prog = p;
+        localStorage.setItem('str_prog', JSON.stringify(p));
+        if (prog[0].prev_prog) {
+          const pp = typeof prog[0].prev_prog === 'string' ? JSON.parse(prog[0].prev_prog) : prog[0].prev_prog;
+          SDB._cache.prev_prog = pp;
+          localStorage.setItem('str_prev_prog', JSON.stringify(pp));
+        }
+      }
+      eows.forEach(e => {
+        const key = `eow_${e.week_key}`;
+        const val = { feeling: e.feeling, resultText: e.result_text };
+        SDB._cache[key] = val;
+        localStorage.setItem('str_'+key, JSON.stringify(val));
+      });
+    } catch(e) {
+      console.warn('SDB.load fallback to localStorage:', e);
+    }
+  }
 };
 
 // ── Programme de base (tiré de l'image) ──
@@ -3490,10 +3687,63 @@ function hHex2rgba(color,alpha) { if(color.startsWith('#')){const r=parseInt(col
 // ═══════════════════════════════════════════════════════
 
 const CDB = {
-  getTasks: () => { try { return JSON.parse(localStorage.getItem('home_tasks') || 'null') || getDefaultTasks(); } catch { return getDefaultTasks(); } },
-  setTasks: (t) => localStorage.setItem('home_tasks', JSON.stringify(t)),
-  getState: (d) => { try { return JSON.parse(localStorage.getItem('home_state_' + d) || '{}'); } catch { return {}; } },
-  setState: (d, s) => localStorage.setItem('home_state_' + d, JSON.stringify(s)),
+  _tasks: null,
+  _states: {},
+  getTasks: () => {
+    if (CDB._tasks) return CDB._tasks;
+    try { return JSON.parse(localStorage.getItem('home_tasks') || 'null') || getDefaultTasks(); } catch { return getDefaultTasks(); }
+  },
+  setTasks: async (t) => {
+    CDB._tasks = t;
+    localStorage.setItem('home_tasks', JSON.stringify(t));
+    try {
+      // Upsert all tasks, mark deleted ones inactive
+      const existing = await SBX.get('tasks', { select: 'id' });
+      const existingIds = existing.map(e => e.id);
+      const toUpsert = t.map((task, i) => ({
+        id: task.id, icon: task.icon, label: task.label,
+        recur: task.recur, added_date: task.addedDate || null,
+        sort_order: i, active: true
+      }));
+      // Deactivate removed tasks
+      const removedIds = existingIds.filter(id => !t.find(x => x.id === id));
+      for (const id of removedIds) {
+        await SBX.upsert('tasks', [{ id, active: false }]);
+      }
+      if (toUpsert.length) await SBX.upsert('tasks', toUpsert);
+    } catch(e) { console.warn('CDB.setTasks sync error:', e); }
+  },
+  getState: (d) => {
+    if (CDB._states[d]) return CDB._states[d];
+    try { return JSON.parse(localStorage.getItem('home_state_' + d) || '{}'); } catch { return {}; }
+  },
+  setState: async (d, s) => {
+    CDB._states[d] = s;
+    localStorage.setItem('home_state_' + d, JSON.stringify(s));
+    try {
+      const rows = Object.entries(s).map(([task_id, done]) => ({ date: d, task_id, done }));
+      if (rows.length) await SBX.upsert('task_state', rows);
+    } catch(e) { console.warn('CDB.setState sync error:', e); }
+  },
+  async load() {
+    try {
+      const [tasks, states] = await Promise.all([
+        SBX.get('tasks', { select: '*', filter: 'active=eq.true', order: 'sort_order.asc' }),
+        SBX.get('task_state', { select: '*', filter: `date=gte.${new Date(Date.now()-7*864e5).toISOString().split('T')[0]}` })
+      ]);
+      if (tasks.length) {
+        CDB._tasks = tasks.map(t => ({
+          id: t.id, icon: t.icon, label: t.label, recur: t.recur, addedDate: t.added_date
+        }));
+        localStorage.setItem('home_tasks', JSON.stringify(CDB._tasks));
+      }
+      // Group states by date
+      states.forEach(s => {
+        if (!CDB._states[s.date]) CDB._states[s.date] = {};
+        CDB._states[s.date][s.task_id] = s.done;
+      });
+    } catch(e) { console.warn('CDB.load fallback to localStorage:', e); }
+  }
 };
 
 function getDefaultTasks() {
@@ -3517,10 +3767,10 @@ function isTaskActiveToday(task) {
   return true;
 }
 
-function toggleTask(id) {
+async function toggleTask(id) {
   const d = today(), state = CDB.getState(d);
   state[id] = !state[id];
-  CDB.setState(d, state);
+  await CDB.setState(d, state);
   // Mise à jour visuelle immédiate sans re-fetch santé
   const tasks = CDB.getTasks();
   renderChecklistUI(tasks, state);
@@ -3533,9 +3783,9 @@ function toggleTask(id) {
   if(gdd) gdd.innerHTML = gd.slice(0,6).map(d=>`<span class="score-pill" style="background:${d.ok?'rgba(0,232,122,0.12)':'rgba(255,92,92,0.1)'};color:${d.ok?'var(--green)':'var(--red)'}"> ${d.ok?'✓':'✗'} ${d.label}</span>`).join('');
 }
 
-function deleteTask(id) {
+async function deleteTask(id) {
   const tasks = CDB.getTasks().filter(t => t.id !== id);
-  CDB.setTasks(tasks);
+  await CDB.setTasks(tasks);
   renderChecklistUI(tasks, CDB.getState(today()));
 }
 
@@ -3557,14 +3807,14 @@ function selectEmoji(e) {
   document.querySelectorAll('.emoji-opt').forEach(el => el.classList.remove('selected'));
   event.target.classList.add('selected');
 }
-function confirmAddTask() {
+async function confirmAddTask() {
   const label = document.getElementById('task-label').value.trim();
   if (!label) { document.getElementById('task-label').focus(); return; }
   const emoji = document.getElementById('task-emoji').value.trim() || _selEmoji || '✅';
   const recur = document.getElementById('task-recur').value;
   const tasks = CDB.getTasks();
   tasks.push({ id:'t'+Date.now(), icon:emoji, label, recur, addedDate:today() });
-  CDB.setTasks(tasks);
+  await CDB.setTasks(tasks);
   closeAddTask();
   renderChecklistUI(tasks, CDB.getState(today()));
 }
@@ -3681,6 +3931,223 @@ function animateCounter(id,target){const el=document.getElementById(id);if(!el)r
 })();
 
 renderHomePage();
+
+// ═══════════════════════════════════════════════════════
+//  SCORE HISTORY DATABASE
+// ═══════════════════════════════════════════════════════
+
+const ScoreDB = {
+  _cache: [],
+  getAll: () => ScoreDB._cache.length ? ScoreDB._cache : (JSON.parse(localStorage.getItem('lt_scoreHistory') || '[]')),
+  save: async (date, goals, health) => {
+    const entry = { date, goals_score: goals, health_score: health, perfect: goals >= 100 && health >= 80 };
+    // Update local cache
+    const idx = ScoreDB._cache.findIndex(s => s.date === date);
+    if (idx >= 0) ScoreDB._cache[idx] = { date, goals: goals, health: health, perfect: entry.perfect };
+    else ScoreDB._cache.push({ date, goals, health, perfect: entry.perfect });
+    ScoreDB._cache.sort((a,b) => a.date.localeCompare(b.date));
+    localStorage.setItem('lt_scoreHistory', JSON.stringify(ScoreDB._cache));
+    // Persist to Supabase
+    try { await SBX.upsert('score_history', [entry]); } catch(e) { console.warn('ScoreDB.save error:', e); }
+  },
+  getLast: (days) => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-days);
+    const cutStr = cutoff.toISOString().split('T')[0];
+    return ScoreDB.getAll().filter(s => s.date >= cutStr);
+  },
+  getPerfectCount: () => ScoreDB.getAll().filter(s => s.perfect).length,
+  getPerfectStreak: () => {
+    const all = ScoreDB.getAll().slice().reverse();
+    let streak = 0;
+    for (const s of all) { if (s.perfect) streak++; else break; }
+    return streak;
+  },
+  async load() {
+    try {
+      const rows = await SBX.get('score_history', { select: '*', order: 'date.asc', limit: 365 });
+      ScoreDB._cache = rows.map(r => ({
+        date: r.date, goals: r.goals_score, health: r.health_score, perfect: r.perfect
+      }));
+      localStorage.setItem('lt_scoreHistory', JSON.stringify(ScoreDB._cache));
+    } catch(e) {
+      console.warn('ScoreDB.load fallback:', e);
+      ScoreDB._cache = JSON.parse(localStorage.getItem('lt_scoreHistory') || '[]');
+    }
+  }
+};
+
+// Hook renderHomePage to auto-save scores after render
+const _origRHP = renderHomePage;
+renderHomePage = async function() {
+  await _origRHP.apply(this, arguments);
+  setTimeout(async () => {
+    const gVal = parseInt(document.getElementById('score-goals-val')?.textContent) || 0;
+    const hVal = parseInt(document.getElementById('score-health-val')?.textContent) || 0;
+    if (gVal > 0 || hVal > 0) {
+      await ScoreDB.save(today(), gVal, hVal);
+      renderPerfectDaysBanner();
+      renderScoresChart(currentHistRange);
+    }
+  }, 900);
+};
+
+// Perfect Days Banner
+function renderPerfectDaysBanner() {
+  const el = document.getElementById('perfect-days-banner');
+  if (!el) return;
+  const total = ScoreDB.getPerfectCount();
+  const streak = ScoreDB.getPerfectStreak();
+  const allScores = ScoreDB.getAll();
+  const dots = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    const entry = allScores.find(s => s.date === ds);
+    const isToday = i === 0;
+    let color;
+    if (!entry) color = 'var(--bg4)';
+    else if (entry.perfect) color = '#00E87A';
+    else if (entry.goals >= 80 || entry.health >= 80) color = '#F5C400';
+    else color = '#FF5C5C';
+    const glow = (entry && entry.perfect && isToday) ? 'box-shadow:0 0 6px #00E87A;' : '';
+    dots.push(`<div style="width:9px;height:9px;border-radius:50%;background:${color};${glow}flex-shrink:0;" title="${ds} — Obj:${entry?entry.goals:'?'} Santé:${entry?entry.health:'?'}"></div>`);
+  }
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,rgba(0,232,122,0.08),rgba(0,232,122,0.02));border:1px solid rgba(0,232,122,0.2);border-radius:var(--radius);padding:14px 20px;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:44px;font-weight:700;color:#00E87A;line-height:1;flex-shrink:0;">${total}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:600;color:var(--text);">Jours parfaits 🎯</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px;">Streak : <strong style="color:${streak>0?'#00E87A':'var(--text2)'}">${streak} j</strong> · Objectifs 100% &amp; Santé ≥ 80%</div>
+      <div style="display:flex;gap:4px;margin-top:8px;align-items:center;">${dots.join('')}
+        <span style="font-size:9px;color:var(--text3);margin-left:4px;">← 14 jours</span>
+      </div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;padding-left:12px;border-left:1px solid var(--border);">
+      <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;">Ce mois</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#00E87A;line-height:1.2;">${ScoreDB.getLast(30).filter(s=>s.perfect).length}</div>
+      <div style="font-size:9px;color:var(--text3);margin-top:2px;">parfaits</div>
+    </div>
+  </div>`;
+}
+
+// Score Charts
+let currentHistRange = 7;
+let chartGoalsInst = null;
+let chartHealthInst = null;
+
+function setHistRange(days) {
+  currentHistRange = days;
+  document.querySelectorAll('.hist-range-btn').forEach(b => {
+    b.classList.toggle('active', +b.dataset.days === days);
+  });
+  renderScoresChart(days);
+}
+
+function renderScoresChart(days) {
+  const data = ScoreDB.getLast(days);
+  const container = document.getElementById('scores-chart-container');
+  if (!container) return;
+
+  if (!data.length) {
+    container.innerHTML = `<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;line-height:1.7;">Pas encore de données.<br>Les scores sont enregistrés automatiquement chaque jour.</div>`;
+    return;
+  }
+
+  if (!document.getElementById('chart-goals')) {
+    container.innerHTML = `
+      <canvas id="chart-goals" height="80"></canvas>
+      <div style="display:flex;align-items:center;gap:6px;margin:6px 0 10px;font-size:11px;color:var(--text3);">
+        <span style="width:12px;height:3px;background:#00E87A;display:inline-block;border-radius:2px;"></span> Objectifs du jour
+      </div>
+      <canvas id="chart-health" height="80"></canvas>
+      <div style="display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:11px;color:var(--text3);">
+        <span style="width:12px;height:3px;background:#FF6B8A;display:inline-block;border-radius:2px;"></span> État de santé
+      </div>`;
+  }
+
+  const labels = [], goalsData = [], healthData = [];
+  for (let i = days-1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const ds = d.toISOString().split('T')[0];
+    const entry = data.find(s => s.date === ds);
+    const showLabel = days <= 14 || i % Math.ceil(days/8) === 0;
+    labels.push(showLabel ? d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '');
+    goalsData.push(entry?.goals ?? null);
+    healthData.push(entry?.health ?? null);
+  }
+
+  const mkDataset = (arr, color) => ({
+    data: arr,
+    borderColor: color,
+    backgroundColor: color + '18',
+    borderWidth: 2,
+    pointRadius: ctx => ctx.raw !== null ? (days<=14?3.5:2) : 0,
+    pointBackgroundColor: color,
+    pointHoverRadius: 5,
+    tension: 0.38,
+    fill: true,
+    spanGaps: true,
+  });
+
+  const baseOpts = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#161f1c', borderColor: '#2a3d32', borderWidth: 1,
+        titleColor: '#7a9e8e', bodyColor: '#b0c8bc', padding: 8,
+        callbacks: { label: ctx => ctx.raw !== null ? ` ${ctx.raw}/100` : ' —' }
+      }
+    },
+    scales: {
+      x: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#4e6a5e',font:{size:9,family:"'JetBrains Mono',monospace"},maxRotation:0} },
+      y: { min:0, max:100, grid:{color:'rgba(255,255,255,0.03)'}, ticks:{color:'#4e6a5e',font:{size:9},stepSize:50} }
+    }
+  };
+
+  function drawCharts() {
+    if (typeof Chart === 'undefined') return;
+    const ctxG = document.getElementById('chart-goals');
+    const ctxH = document.getElementById('chart-health');
+    if (!ctxG || !ctxH) return;
+    if (chartGoalsInst) { chartGoalsInst.destroy(); chartGoalsInst = null; }
+    if (chartHealthInst) { chartHealthInst.destroy(); chartHealthInst = null; }
+    chartGoalsInst = new Chart(ctxG, {type:'line', data:{labels, datasets:[mkDataset(goalsData,'#00E87A')]}, options:JSON.parse(JSON.stringify(baseOpts))});
+    chartHealthInst = new Chart(ctxH, {type:'line', data:{labels, datasets:[mkDataset(healthData,'#FF6B8A')]}, options:JSON.parse(JSON.stringify(baseOpts))});
+  }
+
+  if (typeof Chart !== 'undefined') {
+    drawCharts();
+  } else {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+    s.onload = drawCharts;
+    document.head.appendChild(s);
+  }
+}
+
+// Initialise
+renderPerfectDaysBanner();
+setTimeout(() => renderScoresChart(currentHistRange), 500);
+
+// ── Master init: charge toutes les données Supabase au démarrage ──
+(async function initAllDBs() {
+  try {
+    await Promise.all([
+      ScoreDB.load(),
+      DB.load(),
+      SDB.load(),
+      CDB.load()
+    ]);
+    console.log('✅ Données chargées depuis Supabase');
+    // Re-render home avec données fraîches
+    renderHomePage();
+    renderPerfectDaysBanner();
+    setTimeout(() => renderScoresChart(currentHistRange), 300);
+  } catch(e) {
+    console.warn('Init partiel (fallback localStorage):', e);
+    renderHomePage();
+  }
+})();
 </script>
 </body>
 </html>
