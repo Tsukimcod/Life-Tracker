@@ -768,6 +768,119 @@ select.form-control option { background: var(--bg3); }
 .health-table .warn { color:var(--amber); }
 .health-table .bad  { color:var(--red); }
 @media (max-width:768px) { .health-grid-2, .health-grid-3 { grid-template-columns:1fr; } }
+
+/* ════════════════════════════════════════
+   PAGE WARZONE
+════════════════════════════════════════ */
+.wz-rank-card {
+  display: flex; align-items: center; gap: 20px;
+  padding: 4px;
+}
+.wz-rank-badge {
+  width: 72px; height: 72px; border-radius: 16px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 4px 18px rgba(0,0,0,0.35);
+  transition: transform var(--transition);
+}
+.wz-rank-card:hover .wz-rank-badge { transform: scale(1.04) rotate(-2deg); }
+.wz-rank-info { flex: 1; min-width: 0; }
+.wz-rank-name { font-size: 19px; font-weight: 700; letter-spacing: -0.2px; line-height: 1.2; }
+.wz-rank-div { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.wz-rank-sr {
+  font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 22px; color: var(--text);
+  text-align: right; flex-shrink: 0;
+}
+.wz-rank-sr .unit { font-size: 11px; color: var(--text3); font-weight: 500; margin-left: 3px; }
+.wz-progress-wrap {
+  margin-top: 14px; background: var(--bg3); border-radius: 5px; height: 8px; overflow: hidden;
+  position: relative;
+}
+.wz-progress-fill {
+  height: 100%; border-radius: 5px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1);
+  background: linear-gradient(90deg, var(--green), #00ffa8);
+  box-shadow: 0 0 10px var(--green-glow);
+}
+.wz-progress-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--text3); margin-top:6px; font-family:'JetBrains Mono',monospace; }
+
+/* Rank ladder */
+.wz-ladder { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.wz-ladder-item {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 8px; text-align: center; background: var(--bg3);
+  transition: all var(--transition); position: relative; overflow: hidden;
+}
+.wz-ladder-item .wzl-icon { font-size: 20px; margin-bottom: 4px; display:block; filter: grayscale(0.6) opacity(0.65); transition: filter var(--transition); }
+.wz-ladder-item .wzl-name { font-size: 11px; font-weight: 600; color: var(--text2); }
+.wz-ladder-item .wzl-range { font-size: 9.5px; color: var(--text3); margin-top: 2px; font-family:'JetBrains Mono',monospace; }
+.wz-ladder-item.current {
+  border-color: var(--rank-color, var(--green));
+  background: var(--bg4);
+  box-shadow: 0 0 0 1px var(--rank-color, var(--green)) inset, 0 0 16px -4px var(--rank-color, var(--green));
+}
+.wz-ladder-item.current .wzl-icon { filter: none; }
+.wz-ladder-item.current .wzl-name { color: var(--text); }
+.wz-ladder-item.passed { opacity: 0.55; }
+.wz-ladder-item.passed .wzl-icon { filter: grayscale(0.3) opacity(0.8); }
+
+/* SR daily counter */
+.wz-sr-input-row { display: flex; gap: 8px; align-items: stretch; }
+.wz-sr-input-row .form-control { flex: 1; }
+.wz-sr-quick { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.wz-chip {
+  border: 1px solid var(--border2); background: var(--bg3); color: var(--text2);
+  border-radius: 20px; padding: 5px 13px; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all var(--transition); font-family:'JetBrains Mono',monospace;
+}
+.wz-chip:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+.wz-chip.neg:hover { border-color: var(--red); color: var(--red); background: rgba(255,92,92,0.08); }
+.wz-today-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 16px; margin-bottom: 14px;
+}
+.wz-today-banner .label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.wz-today-banner .value { font-family:'JetBrains Mono',monospace; font-size: 20px; font-weight: 700; }
+.wz-today-banner .value.pos { color: var(--green); }
+.wz-today-banner .value.neg { color: var(--red); }
+.wz-today-banner .value.zero { color: var(--text3); }
+
+/* SR history list */
+.wz-log-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 4px; border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+.wz-log-item:last-child { border-bottom: none; }
+.wz-log-date { color: var(--text2); flex: 1; }
+.wz-log-delta { font-family:'JetBrains Mono',monospace; font-weight: 700; min-width: 56px; text-align: right; }
+.wz-log-delta.pos { color: var(--green); }
+.wz-log-delta.neg { color: var(--red); }
+.wz-log-total { font-family:'JetBrains Mono',monospace; color: var(--text3); font-size: 11px; min-width: 70px; text-align: right; }
+.wz-log-del {
+  opacity: 0; background: none; border: none; color: var(--text3); cursor: pointer;
+  font-size: 11px; padding: 2px 6px; border-radius: 4px; transition: all var(--transition);
+}
+.wz-log-item:hover .wz-log-del { opacity: 1; }
+.wz-log-del:hover { color: var(--red); }
+
+/* Objectives */
+.wz-goal-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 10px; border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+  border-radius: 6px;
+}
+.wz-goal-item:hover { background: var(--bg3); }
+.wz-goal-item:last-child { border-bottom: none; }
+.wz-goal-icon { font-size: 18px; flex-shrink: 0; width: 22px; text-align: center; }
+.wz-goal-body { flex: 1; min-width: 0; }
+.wz-goal-title { font-size: 13px; font-weight: 500; color: var(--text); transition: color var(--transition); }
+.wz-goal-desc { font-size: 11.5px; color: var(--text3); margin-top: 2px; }
+.wz-goal-item.done .wz-goal-title { text-decoration: line-through; color: var(--text3); }
+.wz-goal-item.done .check-box { background: var(--green); border-color: var(--green); color: #03130A; box-shadow: 0 0 10px var(--green-glow); }
 </style>
 </head>
 <body>
@@ -811,11 +924,10 @@ select.form-control option { background: var(--bg3); }
   </div>
 
   <div class="sidebar-section">
-    <div class="sidebar-section-label">Vie</div>
-    <button class="nav-item soon">
-      <span class="nav-icon">🎯</span>
-      <span>Projets</span>
-      <span class="nav-badge">soon</span>
+    <div class="sidebar-section-label">Projets</div>
+    <button class="nav-item" onclick="showPage('warzone')">
+      <span class="nav-icon">🎮</span>
+      <span>Warzone</span>
     </button>
     <button class="nav-item soon">
       <span class="nav-icon">📚</span>
@@ -824,7 +936,7 @@ select.form-control option { background: var(--bg3); }
     </button>
   </div>
 
-  <div class="sidebar-footer"><span class="pulse-dot" style="margin-right:0;"></span>v1.2 · Course + Muscu + Santé</div>
+  <div class="sidebar-footer"><span class="pulse-dot" style="margin-right:0;"></span>v1.3 · Course + Muscu + Santé + Warzone</div>
 </nav>
 
 <!-- ══ MAIN ══ -->
@@ -970,6 +1082,51 @@ select.form-control option { background: var(--bg3); }
 </div>
 
 <div id="page-running" class="page">
+
+<!-- ══ MODAL : Ajouter SR (date personnalisée) ══ -->
+<div id="modal-wz-sr" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
+  <div class="modal-box" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:360px;max-width:90vw;">
+    <div style="font-size:15px;font-weight:600;margin-bottom:16px;">Ajouter du SR</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="wz-modal-date" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Variation de SR</label>
+        <input type="number" id="wz-modal-delta" class="form-control" placeholder="ex: 75 ou -40">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeWzAddSR()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmWzAddSR()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL : Ajouter objectif ══ -->
+<div id="modal-wz-goal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
+  <div class="modal-box" style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);padding:24px;width:380px;max-width:90vw;">
+    <div style="font-size:15px;font-weight:600;margin-bottom:16px;">Ajouter un objectif</div>
+    <div class="form-group">
+      <label>Icône</label>
+      <div id="wz-emoji-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;"></div>
+      <input type="text" id="wz-goal-emoji" class="form-control" placeholder="ou tape un emoji..." maxlength="2" style="width:80px;">
+    </div>
+    <div class="form-group">
+      <label>Titre</label>
+      <input type="text" id="wz-goal-title" class="form-control" placeholder="ex: Gagner une partie Custom">
+    </div>
+    <div class="form-group">
+      <label>Description (optionnel)</label>
+      <input type="text" id="wz-goal-desc" class="form-control" placeholder="ex: Avec l'équipe, mode 1v1">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeWzAddGoal()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmWzAddGoal()">Ajouter</button>
+    </div>
+  </div>
+</div>
 
   <div class="page-header">
     <div class="page-header-top">
@@ -1417,6 +1574,102 @@ select.form-control option { background: var(--bg3); }
   </div>
 </div><!-- /page-sante -->
 
+<!-- ══ PAGE WARZONE ══ -->
+<div id="page-warzone" class="page">
+  <div class="page-header">
+    <div class="page-header-top">
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+        <div>
+          <div class="page-title"><span class="pulse-dot"></span>Warzone</div>
+          <div class="page-subtitle">Suivi de rang, objectifs et progression SR</div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="openWzAddSR()">+ Ajouter du SR</button>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- Rang actuel -->
+    <div class="card">
+      <div class="card-title">Rang actuel</div>
+      <div class="wz-rank-card">
+        <div class="wz-rank-badge" id="wz-rank-badge">🥉</div>
+        <div class="wz-rank-info">
+          <div class="wz-rank-name" id="wz-rank-name">Bronze</div>
+          <div class="wz-rank-div" id="wz-rank-div">Division III</div>
+        </div>
+        <div class="wz-rank-sr"><span id="wz-rank-sr-val">0</span><span class="unit">SR</span></div>
+      </div>
+      <div class="wz-progress-wrap"><div class="wz-progress-fill" id="wz-progress-fill" style="width:0%"></div></div>
+      <div class="wz-progress-labels">
+        <span id="wz-progress-cur">0 SR</span>
+        <span id="wz-progress-next">Prochain rang : 200 SR</span>
+      </div>
+      <div class="form-grid" style="margin-top:18px;">
+        <div class="form-group">
+          <label>Définir mon SR actuel</label>
+          <input type="number" class="form-control" id="wz-sr-set-input" placeholder="ex: 1450">
+        </div>
+        <div class="form-group">
+          <label style="opacity:0;">.</label>
+          <button class="btn btn-secondary full-width" onclick="wzSetCurrentSR()">Mettre à jour</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Échelle des rangs -->
+    <div class="card">
+      <div class="card-title">Échelle des rangs</div>
+      <div class="wz-ladder" id="wz-ladder"></div>
+    </div>
+
+    <!-- Compteur SR du jour -->
+    <div class="card">
+      <div class="card-title">Compteur SR du jour</div>
+      <div class="wz-today-banner">
+        <div>
+          <div class="label">Variation aujourd'hui</div>
+          <div class="value" id="wz-today-delta">0 SR</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="label">SR total</div>
+          <div class="value" style="color:var(--text);" id="wz-today-total">0 SR</div>
+        </div>
+      </div>
+      <div class="wz-sr-input-row">
+        <input type="number" class="form-control" id="wz-sr-delta-input" placeholder="Variation de SR (ex: 50 ou -35)">
+        <button class="btn btn-primary" onclick="wzAddSRDelta()">Ajouter</button>
+      </div>
+      <div class="wz-sr-quick">
+        <button class="wz-chip" onclick="wzQuickAdd(25)">+25</button>
+        <button class="wz-chip" onclick="wzQuickAdd(50)">+50</button>
+        <button class="wz-chip" onclick="wzQuickAdd(100)">+100</button>
+        <button class="wz-chip neg" onclick="wzQuickAdd(-25)">−25</button>
+        <button class="wz-chip neg" onclick="wzQuickAdd(-50)">−50</button>
+        <button class="wz-chip neg" onclick="wzQuickAdd(-100)">−100</button>
+      </div>
+      <div class="chart-wrap h160" style="margin-top:18px;"><canvas id="wzSRChart"></canvas></div>
+    </div>
+
+    <!-- Historique -->
+    <div class="card">
+      <div class="card-title">Historique récent</div>
+      <div id="wz-log-list"></div>
+    </div>
+
+    <!-- Objectifs -->
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Objectifs</span>
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;" onclick="openWzAddGoal()">+ Ajouter</button>
+      </div>
+      <div id="wz-goals-list"></div>
+    </div>
+
+  </div>
+</div><!-- /page-warzone -->
+
 </main>
 </div>
 
@@ -1605,6 +1858,7 @@ function showPage(name) {
     startHealthAutoSync();
   }
   if (name === 'home') renderHomePage();
+  if (name === 'warzone') renderWarzonePage();
   closeSidebar();
 }
 
@@ -4258,6 +4512,336 @@ function renderScoresChart(days) {
 // Initialise
 renderPerfectDaysBanner();
 setTimeout(() => renderScoresChart(currentHistRange), 500);
+
+// ════════════════════════════════════════
+// WARZONE — Tracker de SR & objectifs
+// ════════════════════════════════════════
+
+// Échelle des rangs Warzone Ranked Play (SR thresholds)
+const WZ_RANKS = [
+  { name: 'Bronze',     div: 'III', min: 0,    max: 200,  icon: '🥉', color: '#C9885C' },
+  { name: 'Bronze',     div: 'II',  min: 200,  max: 400,  icon: '🥉', color: '#C9885C' },
+  { name: 'Bronze',     div: 'I',   min: 400,  max: 600,  icon: '🥉', color: '#C9885C' },
+  { name: 'Silver',     div: 'III', min: 600,  max: 800,  icon: '🥈', color: '#B8C4CC' },
+  { name: 'Silver',     div: 'II',  min: 800,  max: 1000, icon: '🥈', color: '#B8C4CC' },
+  { name: 'Silver',     div: 'I',   min: 1000, max: 1200, icon: '🥈', color: '#B8C4CC' },
+  { name: 'Gold',       div: 'III', min: 1200, max: 1400, icon: '🥇', color: '#FFD15C' },
+  { name: 'Gold',       div: 'II',  min: 1400, max: 1600, icon: '🥇', color: '#FFD15C' },
+  { name: 'Gold',       div: 'I',   min: 1600, max: 1800, icon: '🥇', color: '#FFD15C' },
+  { name: 'Platinum',   div: 'III', min: 1800, max: 2000, icon: '💠', color: '#6FE3D9' },
+  { name: 'Platinum',   div: 'II',  min: 2000, max: 2200, icon: '💠', color: '#6FE3D9' },
+  { name: 'Platinum',   div: 'I',   min: 2200, max: 2400, icon: '💠', color: '#6FE3D9' },
+  { name: 'Diamond',    div: 'III', min: 2400, max: 2600, icon: '💎', color: '#8FD3FF' },
+  { name: 'Diamond',    div: 'II',  min: 2600, max: 2800, icon: '💎', color: '#8FD3FF' },
+  { name: 'Diamond',    div: 'I',   min: 2800, max: 3000, icon: '💎', color: '#8FD3FF' },
+  { name: 'Crimson',    div: 'III', min: 3000, max: 3200, icon: '🔺', color: '#FF5C7A' },
+  { name: 'Crimson',    div: 'II',  min: 3200, max: 3400, icon: '🔺', color: '#FF5C7A' },
+  { name: 'Crimson',    div: 'I',   min: 3400, max: 3600, icon: '🔺', color: '#FF5C7A' },
+  { name: 'Iridescent', div: '',    min: 3600, max: 4400, icon: '🌈', color: '#C77DFF' },
+  { name: 'Top 250',    div: '',    min: 4400, max: 5400, icon: '👑', color: '#FFD700' },
+];
+
+function wzGetRankInfo(sr) {
+  sr = Math.max(0, sr);
+  for (let i = 0; i < WZ_RANKS.length; i++) {
+    const r = WZ_RANKS[i];
+    if (sr < r.max || i === WZ_RANKS.length - 1) return { ...r, index: i, sr };
+  }
+  return { ...WZ_RANKS[WZ_RANKS.length-1], index: WZ_RANKS.length-1, sr };
+}
+
+const WZDB = {
+  getSR: () => { try { return parseInt(localStorage.getItem('wz_sr')) || 0; } catch { return 0; } },
+  setSR: (v) => localStorage.setItem('wz_sr', String(v)),
+  getLog: () => { try { return JSON.parse(localStorage.getItem('wz_log') || '[]'); } catch { return []; } },
+  setLog: (l) => localStorage.setItem('wz_log', JSON.stringify(l)),
+  getGoals: () => { try { return JSON.parse(localStorage.getItem('wz_goals') || 'null') || wzDefaultGoals(); } catch { return wzDefaultGoals(); } },
+  setGoals: (g) => localStorage.setItem('wz_goals', JSON.stringify(g)),
+};
+
+function wzDefaultGoals() {
+  return [
+    { id:'wg1', icon:'🔁', title:'Faire un switch', desc:'Changer de configuration / sensibilité et tester', done:false },
+    { id:'wg2', icon:'🎮', title:'Faire une partie Custom', desc:'Lancer une custom game avec des potes', done:false },
+    { id:'wg3', icon:'🎯', title:'Faire une PP en multijoueur', desc:'Battre son record personnel (kills, score...)', done:false },
+    { id:'wg4', icon:'⚔️', title:'Tournoi Wager 1v1', desc:'Participer ou gagner un wager 1v1', done:false },
+  ];
+}
+
+function renderWarzonePage() {
+  const sr = WZDB.getSR();
+  const info = wzGetRankInfo(sr);
+
+  // Badge & infos
+  const badgeEl = document.getElementById('wz-rank-badge');
+  badgeEl.textContent = info.icon;
+  badgeEl.style.background = info.color + '22';
+  badgeEl.style.borderColor = info.color + '55';
+  document.getElementById('wz-rank-name').textContent = info.name;
+  document.getElementById('wz-rank-name').style.color = info.color;
+  document.getElementById('wz-rank-div').textContent = info.div ? `Division ${info.div}` : (info.name === 'Top 250' ? 'Classement national' : 'Rang maximal');
+  document.getElementById('wz-rank-sr-val').textContent = sr.toLocaleString('fr-FR');
+
+  // Progress bar vers le rang suivant
+  const range = info.max - info.min;
+  const pct = range > 0 ? Math.min(100, Math.max(0, (sr - info.min) / range * 100)) : 100;
+  const fill = document.getElementById('wz-progress-fill');
+  fill.style.width = pct + '%';
+  fill.style.background = `linear-gradient(90deg, ${info.color}, ${info.color}cc)`;
+  fill.style.boxShadow = `0 0 10px ${info.color}55`;
+  document.getElementById('wz-progress-cur').textContent = sr.toLocaleString('fr-FR') + ' SR';
+  document.getElementById('wz-progress-next').textContent = info.index === WZ_RANKS.length - 1
+    ? 'Rang maximal atteint 👑'
+    : `Prochain rang : ${info.max.toLocaleString('fr-FR')} SR`;
+
+  // Échelle des rangs
+  const ladder = document.getElementById('wz-ladder');
+  ladder.innerHTML = WZ_RANKS.map((r, i) => {
+    const cls = i === info.index ? 'current' : (i < info.index ? 'passed' : '');
+    return `<div class="wz-ladder-item ${cls}" style="--rank-color:${r.color}">
+      <span class="wzl-icon">${r.icon}</span>
+      <div class="wzl-name">${r.name}${r.div ? ' '+r.div : ''}</div>
+      <div class="wzl-range">${r.min.toLocaleString('fr-FR')}${i===WZ_RANKS.length-1 ? '+' : '–'+r.max.toLocaleString('fr-FR')}</div>
+    </div>`;
+  }).join('');
+  // Scroll the current rank into view
+  setTimeout(() => {
+    const cur = ladder.querySelector('.current');
+    if (cur) cur.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  }, 100);
+
+  // Compteur du jour
+  const log = WZDB.getLog();
+  const todayStr = today();
+  const todayEntries = log.filter(e => e.date === todayStr);
+  const todayDelta = todayEntries.reduce((a,b) => a + b.delta, 0);
+  const deltaEl = document.getElementById('wz-today-delta');
+  deltaEl.textContent = (todayDelta > 0 ? '+' : '') + todayDelta.toLocaleString('fr-FR') + ' SR';
+  deltaEl.className = 'value ' + (todayDelta > 0 ? 'pos' : todayDelta < 0 ? 'neg' : 'zero');
+  document.getElementById('wz-today-total').textContent = sr.toLocaleString('fr-FR') + ' SR';
+
+  // Historique
+  renderWzLog(log);
+
+  // Objectifs
+  renderWzGoals();
+
+  // Graphique
+  renderWzSRChart(log, sr);
+}
+
+function wzSetCurrentSR() {
+  const input = document.getElementById('wz-sr-set-input');
+  const val = parseInt(input.value);
+  if (isNaN(val) || val < 0) { input.focus(); return; }
+  const prevSR = WZDB.getSR();
+  const diff = val - prevSR;
+  WZDB.setSR(val);
+  if (diff !== 0) {
+    const log = WZDB.getLog();
+    log.push({ date: today(), delta: diff, total: val, ts: Date.now() });
+    WZDB.setLog(log);
+  }
+  input.value = '';
+  renderWarzonePage();
+  showToast('SR mis à jour : ' + val.toLocaleString('fr-FR'));
+}
+
+function wzAddSRDelta() {
+  const input = document.getElementById('wz-sr-delta-input');
+  const delta = parseInt(input.value);
+  if (isNaN(delta) || delta === 0) { input.focus(); return; }
+  wzApplyDelta(today(), delta);
+  input.value = '';
+}
+
+function wzQuickAdd(delta) {
+  wzApplyDelta(today(), delta);
+}
+
+function wzApplyDelta(date, delta) {
+  const newSR = Math.max(0, WZDB.getSR() + delta);
+  WZDB.setSR(newSR);
+  const log = WZDB.getLog();
+  log.push({ date, delta, total: newSR, ts: Date.now() });
+  WZDB.setLog(log);
+  renderWarzonePage();
+  showToast((delta > 0 ? '+' : '') + delta + ' SR ajouté');
+}
+
+function wzDeleteLogEntry(ts) {
+  let log = WZDB.getLog();
+  const entry = log.find(e => e.ts === ts);
+  if (!entry) return;
+  log = log.filter(e => e.ts !== ts);
+  WZDB.setLog(log);
+  // Recompute current SR from remaining log (sum of all deltas, base 0)
+  const total = log.reduce((a,b) => a + b.delta, 0);
+  WZDB.setSR(Math.max(0, total));
+  // Fix running totals
+  let running = 0;
+  log.forEach(e => { running += e.delta; e.total = Math.max(0, running); });
+  WZDB.setLog(log);
+  renderWarzonePage();
+}
+
+function renderWzLog(log) {
+  const el = document.getElementById('wz-log-list');
+  if (!log.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-msg" style="font-size:13px;">Aucune entrée pour l\'instant — ajoute ton premier SR du jour !</div></div>';
+    return;
+  }
+  const sorted = [...log].sort((a,b) => b.ts - a.ts).slice(0, 30);
+  el.innerHTML = sorted.map(e => {
+    const d = new Date(e.date + 'T00:00:00');
+    const dateStr = d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' });
+    const cls = e.delta > 0 ? 'pos' : e.delta < 0 ? 'neg' : '';
+    return `<div class="wz-log-item">
+      <span class="wz-log-date">${dateStr}</span>
+      <span class="wz-log-delta ${cls}">${e.delta > 0 ? '+' : ''}${e.delta}</span>
+      <span class="wz-log-total">${e.total.toLocaleString('fr-FR')} SR</span>
+      <button class="wz-log-del" onclick="wzDeleteLogEntry(${e.ts})" title="Supprimer">✕</button>
+    </div>`;
+  }).join('');
+}
+
+let wzSRChartInstance = null;
+function renderWzSRChart(log, currentSR) {
+  const ctx = document.getElementById('wzSRChart');
+  if (!ctx) return;
+  // Build last 14 days cumulative SR
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+  const sorted = [...log].sort((a,b) => a.ts - b.ts);
+  // SR value at end of each day = last known total on/before that day, fallback to currentSR if no log
+  const data = days.map(day => {
+    const entries = sorted.filter(e => e.date <= day);
+    if (!entries.length) return null;
+    return entries[entries.length - 1].total;
+  });
+  // Fill leading nulls with the first known value (or 0)
+  let firstKnown = data.find(v => v !== null);
+  for (let i = 0; i < data.length; i++) { if (data[i] === null) data[i] = firstKnown ?? 0; }
+
+  const labels = days.map(d => new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short' }));
+
+  if (wzSRChartInstance) { wzSRChartInstance.destroy(); wzSRChartInstance = null; }
+  wzSRChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'SR',
+        data,
+        borderColor: '#00E87A',
+        backgroundColor: 'rgba(0,232,122,0.08)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 2,
+        pointBackgroundColor: '#00E87A',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode:'index', intersect:false } },
+      scales: {
+        x: { ticks: { color:'rgba(138,154,142,0.7)', font:{size:10}, maxRotation:0, autoSkip:true, maxTicksLimit:7 }, grid: { display:false } },
+        y: { ticks: { color:'rgba(138,154,142,0.7)', font:{size:10} }, grid: { color:'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+}
+
+// ── Modal : Ajouter SR avec date ──
+function openWzAddSR() {
+  document.getElementById('wz-modal-date').value = today();
+  document.getElementById('wz-modal-delta').value = '';
+  document.getElementById('modal-wz-sr').style.display = 'flex';
+  setTimeout(() => document.getElementById('wz-modal-delta').focus(), 100);
+}
+function closeWzAddSR() { document.getElementById('modal-wz-sr').style.display = 'none'; }
+function confirmWzAddSR() {
+  const date = document.getElementById('wz-modal-date').value || today();
+  const delta = parseInt(document.getElementById('wz-modal-delta').value);
+  if (isNaN(delta) || delta === 0) { document.getElementById('wz-modal-delta').focus(); return; }
+  wzApplyDelta(date, delta);
+  closeWzAddSR();
+}
+document.getElementById('modal-wz-sr').addEventListener('click', function(e){ if(e.target===this) closeWzAddSR(); });
+document.getElementById('wz-modal-delta')?.addEventListener('keydown', e => { if (e.key === 'Enter') confirmWzAddSR(); });
+
+// ── Objectifs ──
+function renderWzGoals() {
+  const el = document.getElementById('wz-goals-list');
+  const goals = WZDB.getGoals();
+  if (!goals.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-msg" style="font-size:13px;">Aucun objectif — clique sur "+ Ajouter"</div></div>';
+    return;
+  }
+  el.innerHTML = goals.map(g => `<div class="wz-goal-item ${g.done?'done':''}" id="wzg-${g.id}">
+    <div class="check-box" onclick="wzToggleGoal('${g.id}')"><svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M2 5.5L4.5 8L9 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <span class="wz-goal-icon">${g.icon}</span>
+    <div class="wz-goal-body" onclick="wzToggleGoal('${g.id}')">
+      <div class="wz-goal-title">${g.title}</div>
+      ${g.desc ? `<div class="wz-goal-desc">${g.desc}</div>` : ''}
+    </div>
+    <button class="check-delete" onclick="wzDeleteGoal('${g.id}')" title="Supprimer"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L8 8M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+  </div>`).join('');
+}
+function wzToggleGoal(id) {
+  const goals = WZDB.getGoals();
+  const g = goals.find(x => x.id === id);
+  if (!g) return;
+  g.done = !g.done;
+  WZDB.setGoals(goals);
+  renderWzGoals();
+}
+function wzDeleteGoal(id) {
+  const goals = WZDB.getGoals().filter(g => g.id !== id);
+  WZDB.setGoals(goals);
+  renderWzGoals();
+}
+
+let _wzSelEmoji = '🎯';
+const WZ_EMOJI_OPTS = ['🎯','🔁','🎮','⚔️','🏆','💪','🔥','🧠','⏱️','🛠️'];
+function openWzAddGoal() {
+  _wzSelEmoji = '🎯';
+  document.getElementById('wz-goal-title').value = '';
+  document.getElementById('wz-goal-desc').value = '';
+  document.getElementById('wz-goal-emoji').value = '';
+  const picker = document.getElementById('wz-emoji-picker');
+  if (!picker.dataset.built) {
+    picker.innerHTML = WZ_EMOJI_OPTS.map((e,i) => `<div class="emoji-opt ${i===0?'selected':''}" onclick="wzSelectEmoji('${e}')" style="width:32px;height:32px;border-radius:8px;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;">${e}</div>`).join('');
+    picker.dataset.built = '1';
+  }
+  picker.querySelectorAll('.emoji-opt').forEach((e,i) => e.classList.toggle('selected', i===0));
+  document.getElementById('modal-wz-goal').style.display = 'flex';
+  setTimeout(() => document.getElementById('wz-goal-title').focus(), 100);
+}
+function closeWzAddGoal() { document.getElementById('modal-wz-goal').style.display = 'none'; }
+function wzSelectEmoji(e) {
+  _wzSelEmoji = e;
+  document.getElementById('wz-goal-emoji').value = e;
+  document.querySelectorAll('#wz-emoji-picker .emoji-opt').forEach(el => el.classList.remove('selected'));
+  event.target.classList.add('selected');
+}
+function confirmWzAddGoal() {
+  const title = document.getElementById('wz-goal-title').value.trim();
+  if (!title) { document.getElementById('wz-goal-title').focus(); return; }
+  const icon = document.getElementById('wz-goal-emoji').value.trim() || _wzSelEmoji || '🎯';
+  const desc = document.getElementById('wz-goal-desc').value.trim();
+  const goals = WZDB.getGoals();
+  goals.push({ id:'wg'+Date.now(), icon, title, desc, done:false });
+  WZDB.setGoals(goals);
+  closeWzAddGoal();
+  renderWzGoals();
+}
+document.getElementById('modal-wz-goal').addEventListener('click', function(e){ if(e.target===this) closeWzAddGoal(); });
+document.getElementById('wz-goal-title')?.addEventListener('keydown', e => { if (e.key === 'Enter') confirmWzAddGoal(); });
 
 // ── Master init: charge toutes les données Supabase au démarrage ──
 (async function initAllDBs() {
